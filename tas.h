@@ -18,7 +18,7 @@ public:
 	void print();
 	int getN(){return n;};
 private:
-	int* tick;
+	long* tick;
 	void echange(word i, word j);
 	Node* tas[TAS_SIZE];
 	word n=0;
