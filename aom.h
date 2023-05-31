@@ -1,3 +1,5 @@
+#ifndef AOM
+#define AOM
 #include "tweezer.h"
 class Aom{
 	public:
@@ -7,4 +9,4 @@ class Aom{
 
 		Aom();
 };
-
+#endif

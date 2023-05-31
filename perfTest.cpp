@@ -2,6 +2,10 @@
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
+#include "core.h"
+#include "scheduler.h"
+#include "aom1D.h"
+#include "aom2D.h"
 using namespace std;
 class Rampup{
 	
@@ -42,7 +46,7 @@ auto startTimer(){
 long getTimer(auto timer){
 	return chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now()-timer).count();
 }
-int main(){
+int test1(){
 	auto now = startTimer();
 	unsigned long i,j;
 	float res(0.0f);
@@ -65,4 +69,17 @@ int main(){
 	cout<<j<<" "<<res<<" "<<i<<endl;
 	//cout<<rampup.calc(0)<<endl;
 	return 0;
+}
+
+int test2(){
+	coreCalc::startTimer();
+	while(1){
+		cout<<coreCalc::getCurrentCardSegment()<<endl;
+	}
+}
+int main(){
+	Aom1D aom1D;
+	Aom2D aom2D;
+	Scheduler scheduler;
+	coreCalc::startCore(scheduler,aom1D,aom2D);
 }

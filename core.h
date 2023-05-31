@@ -1,8 +1,9 @@
-#ifdef CORE
+#ifndef CORE
 #define CORE
-#include "Aom1D.h"
-#include "Aom2D.h"
-
+#include "aom1D.h"
+#include "aom2D.h"
+#include "scheduler.h"
+#include <chrono>
 //this is where the magic is : 
 //first, core is asking the scheduler if there is the need to rewind. thene they agree to wich segment to calculate (bunch of samples)
 //then, the scheduler will call the function generators to calculate the current tick
@@ -14,12 +15,17 @@
 //this function need to be started on a new thread
 
 namespace coreCalc{
-void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2);
+void startTimer();
+long getTimer(std::chrono::time_point<std::chrono::system_clock> timer);
+void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D);
 
-void calculateSegment(Scheduler& scheduler, Aom1D aom1D, Aom2D aom2D);
+void calculateSegment(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D, long tick, int16_t* segment_buffer);
 int getCurrentCardsegment();
-void calculate_tick(Aom1D aom1D, Aom2D);
+void calculate_tick(Aom1D& aom1D,Aom2D& aom2D, long tick, int16_t& buff);
 long findTickAssociatedToSegment(int segement, long lastTick);
 int getCurrentCardSegment();
+void pushSegmentToCard(int segment,int16_t data);
+inline int findSegmentAssociatedToTick(long tick);
 }
+
 #endif
