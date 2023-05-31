@@ -4,6 +4,6 @@ class Tweezer{
 		double N;//normalisation coefficient
 		double w;//frequency
 		double p;//phase 
-		Tweezer():A(42),N(0),w(0),p(0){}
+		Tweezer():A(1),N(1),w(0),p(0){}
 	
 };

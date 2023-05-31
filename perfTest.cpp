@@ -3,23 +3,26 @@
 #include <cmath>
 #include <cstdlib>
 using namespace std;
-class rampup{
+class Rampup{
 	
 
-
-
-
-
-//return the sample duration of the effect
-	int getDuration(){
-		return duration
-	}
-//take a sampletime from the begining of and return a value between 0 and 1
-	float calc(unsigned long time){
+	public:
+		struct Setting{
+			int test;
+		};
+		Setting setting;
+		long duration{4};
+		Rampup(Setting setting):setting(setting){}
+	//return the sample duration of the effect
+		int getDuration(){
+			return duration;
+		}
+	//take a sampletime from the begining of and return a value between 0 and 1
+		float calc(unsigned long time){
+			
+			return (float)setting.test;
 		
-		return 1.0f;
-	
-}
+	}
 
 
 
@@ -47,6 +50,9 @@ int main(){
 	cout<<(unsigned long)((long)-1)<<endl;
 	long x = (getTimer(now) *1043 )% 3;
 	srand(time(nullptr)+getTimer(now)+x);
+	auto* rp = new Rampup({.test = (int)1.789234567e9});
+	cout<<rp->calc(0)<<endl<<rp->getDuration()<<endl;
+	/*
 	while(getTimer(now)<30*1000000){
 		i+=1;
 		res += cos((float)(rand()));
@@ -55,7 +61,8 @@ int main(){
 			i=0;
 		}
 	}
-
-	cout<<j<<endl<<res<<endl<<i;
+*/
+	cout<<j<<" "<<res<<" "<<i<<endl;
+	//cout<<rampup.calc(0)<<endl;
 	return 0;
 }
