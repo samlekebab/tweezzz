@@ -1,11 +1,11 @@
 #ifndef SCHEDULER
 #define SCHEDULER
-#include "tas.h"
 //#include "formGenerator.h"
 class FormGenerator;
 #include <mutex>
-#include <list>
+#include <algorithm>
 #include "tas.h"
+#include <list>
 //this class will callback every active function generator (active meaning in the range of ticks that the function generator asks 
 //it uses a heap to register function generators and a list to go throught active function generators
 class Scheduler{
@@ -14,7 +14,7 @@ class Scheduler{
 		long EOFT{0}; //this time reprent end of the last FormGenerator, it is the default time at 
 			      
 		Tas tas;
-		list<FormGenerator> activeGenerators;
+		std::list<FormGenerator*> activeGenerators;
 
 		
 		//this mutex lock the scheduler during any calculation step (aquired by the core), this way, we are sure that a rewind procedure is correctly done
@@ -26,9 +26,12 @@ class Scheduler{
 				       
 
 
-		long addFormGenerator(FormGenerator f);//add a FromGenerator in the heap, return the time in absolute of the end of this FormGenerator (since the begining of the scheduler)
+		void addFormGenerator(FormGenerator* f);//add a FromGenerator in the heap, return the time in absolute of the end of this FormGenerator (since the begining of the scheduler)
 		long nextSampleToCompute();
 		long computeSample(long tick);
+
+	private :
+		void putInList(FormGenerator* f);
 
 };
 

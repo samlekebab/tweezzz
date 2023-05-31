@@ -5,7 +5,7 @@
 struct Bounds {
 	long start;
 	long end;
-}
+};
 
 class Node {
 public:
@@ -18,7 +18,6 @@ public:
 	Node *pop();
 	Node *view();
 	bool isEmpty();
-	Tas(int* tick);
 	void print();
 	int getN(){return n;};
 private:

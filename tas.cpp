@@ -1,10 +1,9 @@
 #include "tas.h"
-Tas::Tas(int* tick) {
-	this->tick = tick;
-}
+#include <iostream>
+using namespace std;
 bool Tas::comparer(Node* a, Node* b) {
-	int w1 = a.bounds.start;
-	int w2 = b..bounds.start;
+	int w1 = a->bounds.start;
+	int w2 = b->bounds.start;
 	return w2 < w1;
 }
 void Tas::echange(int i, int j) {
@@ -54,7 +53,7 @@ Node* Tas::view() {
 void Tas::print() {
 	cout << "tas de taille " << n << endl;
 	for (int i = 0; i < n; i++) {
-		cout << "element " << i << " : " << (*tas[i]).weight << ", " << (int)(*tas[i]).priority << endl;
+		cout << "element " << i << " : " << (*tas[i]).bounds.start<<endl;
 	}
 }
 

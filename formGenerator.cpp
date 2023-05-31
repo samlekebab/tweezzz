@@ -1,14 +1,22 @@
-#include formGenerator.h
+#include "formGenerator.h"
 #include <stdexcept>
+#include <iostream>
 using namespace std;
-long FormGenerator::connect(long tick,double& target){
-	this.target = target;
+Bounds FormGenerator::connect(long tick,double& target){
+	this->target = &target;
 	if (scheduler == nullptr){
 		cout<<"error unregistered scheduler for formgenerator"<<endl;
 		throw runtime_error("unregistered scheduler"); 
 	}
-	return secheduler->addFormGenerator(scheduler->EOFT+tick,this)
+	this->bounds.start = tick;
+	this->bounds.end = this->getDuration();
+
+	scheduler->addFormGenerator(this);
+	return this->bounds;
 }
-long FormGenerator::connect(double& target){
-	return this.connect(0,target)
+inline Bounds FormGenerator::connect(double& target){
+	return this->connectRelative(0,target);
+}
+inline Bounds FormGenerator::connectRelative(long tick,double& target){
+	return connect(scheduler->EOFT+tick,target);
 }

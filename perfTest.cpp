@@ -6,27 +6,34 @@
 #include "scheduler.h"
 #include "aom1D.h"
 #include "aom2D.h"
+#include "formGenerator.h"
+#include <thread>
 using namespace std;
-class Rampup{
+class Rampup:public FormGenerator{
 	
 
 	public:
 		struct Setting{
 			int test;
+			double duration;
 		};
 		Setting setting;
-		long duration{4};
+		double initial;
 		Rampup(Setting setting):setting(setting){}
 	//return the sample duration of the effect
-		int getDuration(){
-			return duration;
+		long getDuration(){
+			return setting.duration;
 		}
 	//take a sampletime from the begining of and return a value between 0 and 1
-		float calc(unsigned long time){
+		double calc(unsigned long time){
 			
-			return (float)setting.test;
+			return (float)initial+time*(1.0-initial)/setting.duration;
 		
-	}
+		}
+		//if we want to take the value at the beginning to adapte our calculation
+		
+		void setBeginningValue(double value){}
+
 
 
 
@@ -77,9 +84,32 @@ int test2(){
 		cout<<coreCalc::getCurrentCardSegment()<<endl;
 	}
 }
-int main(){
+int test3(){
 	Aom1D aom1D;
 	Aom2D aom2D;
 	Scheduler scheduler;
 	coreCalc::startCore(scheduler,aom1D,aom2D);
+	return 0;
+}
+void sequence(Aom1D& aom1D, Aom2D& aom2D){
+	cout<<"begining of the sequence"<<endl;
+	(new Rampup({.test = 0, .duration = 500}))->connect(aom1D.A);
+}
+int main(){
+	//initialisation
+	Scheduler scheduler;
+	FormGenerator::scheduler = &scheduler;
+	Aom1D aom1D; aom1D.A=0;
+	Aom2D aom2D;
+	thread coreThread(coreCalc::startCore,ref(scheduler),ref(aom1D),ref(aom2D));
+
+
+	//run
+	thread sequence_thread(sequence, std::ref(aom1D), std::ref(aom2D));
+	
+	//end
+	coreThread.join();
+
+	cout<<"end of the program"<<endl;//this never happens
+	return 0;
 }
