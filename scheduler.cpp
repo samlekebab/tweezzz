@@ -22,9 +22,8 @@ long Scheduler::nextSampleToCompute(){return 0;}//TODO ???
 						//
 						//
 long Scheduler::computeSample(long tick){
-	lock_guard<mutex> scheduler_lock(this->usingScheduler_mutex);
+	//lock_guard<mutex> scheduler_lock(this->usingScheduler_mutex);
 	//first, we pop the heap
-	cout<<"calculating tick "<<tick<<endl;
 	while(tas.getN()>0){
 		long start = ((FormGenerator*)tas.view())->bounds.start;
 		if (start>tick)
@@ -40,7 +39,7 @@ long Scheduler::computeSample(long tick){
 	//then we callback every FormGenerator inside the list. When they are at bounds.end, we remove them from the list and destroy them, when at bounds.start, we set the start value
 	//BUG TODO need to add a list that containse finished elements to put them back in case of rewind !!! (this list will be thankfully sorted wich limit complexitiy addup, and can be purged when an element bound.end goes beyond the current play tick
 	auto it = activeGenerators.begin();
-	do{
+	while(it != activeGenerators.end()){
 		/*if ((*it)->bounds.start == tick){
 			cout<<"entering 
 		}*///can't do that because this is not called at every tick
@@ -49,14 +48,15 @@ long Scheduler::computeSample(long tick){
 		  
 		if ((*it)->bounds.end < tick){
 			cout<<"removing a generator"<<endl;
-			activeGenerators.erase(it);
 			delete *it;//BUG TODO see above 
+			auto tmp = it;
+			++it;
+			activeGenerators.erase(tmp);
 		}else{
-			cout<<"calling a generator"<<endl;
 			(*it)->calc(tick - (*it)->bounds.start);
+			++it;
 		}
-
-	}while(++it != activeGenerators.end());
+	}
 	return 0;
 }
 						   

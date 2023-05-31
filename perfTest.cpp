@@ -25,9 +25,11 @@ class Rampup:public FormGenerator{
 			return setting.duration;
 		}
 	//take a sampletime from the begining of and return a value between 0 and 1
-		double calc(unsigned long time){
+		double calc(long time){
 			
-			return (float)initial+time*(1.0-initial)/setting.duration;
+			cout<<"target "<<*target;
+			*target = (double)time*1.0/setting.duration;
+			return *target;
 		
 		}
 		//if we want to take the value at the beginning to adapte our calculation
@@ -93,13 +95,14 @@ int test3(){
 }
 void sequence(Aom1D& aom1D, Aom2D& aom2D){
 	cout<<"begining of the sequence"<<endl;
+	aom1D.A = 0.25;
 	(new Rampup({.test = 0, .duration = 500}))->connect(aom1D.A);
 }
 int main(){
 	//initialisation
 	Scheduler scheduler;
 	FormGenerator::scheduler = &scheduler;
-	Aom1D aom1D; aom1D.A=0;
+	Aom1D aom1D; aom1D.A = 0.5;
 	Aom2D aom2D;
 	thread coreThread(coreCalc::startCore,ref(scheduler),ref(aom1D),ref(aom2D));
 

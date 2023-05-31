@@ -7,17 +7,17 @@
 //
 class FormGenerator:public Node{
 	public:
+		virtual ~FormGenerator();
 		double* target;
 		static Scheduler* scheduler;
-		virtual double calc(long ticks);	//takes ticks number from the begining of the generator (scheduled time)
-		virtual long getDuration();		//return the number of ticks (sample time) that the Form generator takes (cannot change after registration to the scheduler)
-		virtual void setBeginningValue(double value);	//called at the begining of the generation to give to the FormGenerator where we are starting from
+		virtual double calc(long ticks)=0;	//takes ticks number from the begining of the generator (scheduled time)
+		virtual long getDuration()=0;		//return the number of ticks (sample time) that the Form generator takes (cannot change after registration to the scheduler)
+		virtual void setBeginningValue(double value)=0;	//called at the begining of the generation to give to the FormGenerator where we are starting from
 		Bounds connect(double& target);					//registration to the scheduler at EOFT, return the begining and end of the formGenerator in absolute
-		inline Bounds connect(long tick,double& target);					//registration to the scheduler at absolute time "tick"
-		inline Bounds connectRelative(long tick, double& target);			//registration to the scheduler with time delay with respect to EOFT
+		Bounds connect(long tick,double& target);					//registration to the scheduler at absolute time "tick"
+		Bounds connectRelative(long tick, double& target);			//registration to the scheduler with time delay with respect to EOFT
 
 };
-
 
 
 #endif

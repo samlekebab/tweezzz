@@ -17,7 +17,7 @@ using namespace std;
 #define no_card_connected
 namespace coreCalc{
 //DEBUG
-#define DEBUG_SAMPLE_RATE 1
+#define DEBUG_SAMPLE_RATE 20
 chrono::time_point<chrono::system_clock> timer;
 void startTimer(){
 	cout<<"timer start"<<endl;
@@ -62,7 +62,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 		}
 		tickToCompute = (int)(tickToCompute/SEGMENT_SIZE)*SEGMENT_SIZE;//put back at the begging of a segment
 		
-		cout<<"tickToCompute "<<tickToCompute<<endl;
+		//cout<<"tickToCompute "<<tickToCompute<<endl;
 
 		//thirdly, calculate this segment, if we ar'nt over MAX_TICK
 		if (tickToCompute<currentTick+MAX_TICK){
@@ -82,10 +82,11 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 
 #endif
 		//DEBUG
-		cout<<"\n\n";
-		this_thread::sleep_for(500ms);
-
+		//this_thread::sleep_for(50ms);
+		if (currentTick>10'000)
+			continue;
 		//this_tread::yield();//is it slowing down the process ?
+
 	}
 
 
@@ -115,7 +116,7 @@ void calculate_tick(Aom1D& aom1D,Aom2D& aom2D, long tick, int16_t& buff){
 		//TODO what about the rapid phase change whene changing w?
 		sumAom1D += tw.A*tw.N*sin(tw.w*(double) tick + tw.p);
 	}
-	buff = MAX_VALUE * sumAom1D/aom1D.tweezerCount;
+	buff = MAX_VALUE * sumAom1D/aom1D.tweezerCount * aom1D.A * aom1D.N;
 	
 }
 inline int findSegmentAssociatedToTick(long tick){

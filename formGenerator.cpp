@@ -14,9 +14,15 @@ Bounds FormGenerator::connect(long tick,double& target){
 	scheduler->addFormGenerator(this);
 	return this->bounds;
 }
-inline Bounds FormGenerator::connect(double& target){
+Bounds FormGenerator::connect(double& target){
 	return this->connectRelative(0,target);
 }
-inline Bounds FormGenerator::connectRelative(long tick,double& target){
+Bounds FormGenerator::connectRelative(long tick,double& target){
 	return connect(scheduler->EOFT+tick,target);
 }
+FormGenerator::~FormGenerator(){}
+Scheduler* FormGenerator::scheduler=nullptr;
+
+//double FormGenerator::calc(long ticks){return 0;}
+//long FormGenerator::getDuration(){return 0;}	
+//void FormGenerator::setBeginningValue(double value){}
