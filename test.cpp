@@ -1,20 +1,14 @@
 #include <iostream>
 #include <list>
 using namespace std;
-class A{
-	public:
-	int b{0};
-	A(int b):b(b){};
-	list<int> test;
-};
 int main(){
-	list<A*> l;
-	l.insert(l.begin(),new A(1));
-	l.insert(l.begin(),new A(2));
-	auto it = l.begin();
-	for(;it!=l.end();it++){
-		cout<<(*it)->b<<endl;
-
+	long i=1;
+	long X=1'000'000'000;
+	for(long j=1;j<X;j++){
+		if (j!=0)
+			i*=j;
+		i++;
 	}
+	cout<<i<<endl;
 	return 0;
 }

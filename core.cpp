@@ -7,18 +7,19 @@ using namespace std;
 #include <stdio.h>
 #include <cstdio>
 //card contains 2GSample memory 
-#define SEGMENT_SIZE 96 //number of sample per segment
+#define SEGMENT_SIZE 960 //number of sample per segment
 #define BUFFER_SIZE 500'000  //number of segment in a cyclic buffer
-#define SAFE_TICK (3125*96)     //min delay (in ticks) between a push to the card and the actual play (directly related to the delay)
-#define MAX_TICK (10'000*96) //how far we calculate in advance the segments (should'nt influence the delay)
+#define SAFE_TICK (3125*960)     //min delay (in ticks) between a push to the card and the actual play (directly related to the delay)
+#define MAX_TICK (10'000*960) //how far we calculate in advance the segments (should'nt influence the delay)
 #define MAX_VALUE 32767 	//max value of 16bit signed integer
 			    //
-//#define file_output
+#define file_output
+#define test_perf_mode //this mode push the code to go as fast as possible au print result (avrg sample rate, gaps etc...)
 #define no_card_connected
 #define opti_prevent
 namespace coreCalc{
 //DEBUG
-#define DEBUG_SAMPLE_RATE 600'000'000
+#define DEBUG_SAMPLE_RATE 100'000
 chrono::time_point<chrono::system_clock> timer;
 void startTimer(){
 	cout<<"timer start"<<endl;
@@ -27,10 +28,19 @@ void startTimer(){
 long getTimer(chrono::time_point<chrono::system_clock> timer){
 	return chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now()-timer).count();
 }
+#ifdef test_perf_mode
+long curSeg=0;
+#endif
 int getCurrentCardSegment(){
 	//TODO get the current card Segment
 #ifdef no_card_connected
+#ifndef test_perf_mode
 	return (int)(getTimer(timer)/1'000'000.0*DEBUG_SAMPLE_RATE/(float)SEGMENT_SIZE)%BUFFER_SIZE;
+#else
+	curSeg +=1;
+	curSeg %= BUFFER_SIZE;
+	return curSeg;
+#endif
 #endif
 	
 }
@@ -43,6 +53,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 	int currentSegment{0};//current segment played on the card
 	long sum=0;
 	long drop=0;
+	long counter=0;
 #ifdef file_output
 	FILE* f = fopen("./res/cpp.txt","w");
 #endif
@@ -87,6 +98,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 
 #ifdef opti_prevent
 			for (int i{0};i<SEGMENT_SIZE;i++){
+				counter++;
 				sum+=buff[i];
 			}
 			if (currentTick%123456==0){
@@ -94,12 +106,22 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 			}
 #endif
 		}
+#ifndef test_perf_mode
 		//DEBUG
 		//this_thread::sleep_for(500ms);
 		if (currentTick>DEBUG_SAMPLE_RATE*(long)10){
-			cout<<"end"<<endl<<drop<<" "<<(float)drop/DEBUG_SAMPLE_RATE/10<<endl;
+			cout<<"end"<<endl<<drop<<" "<<(float)drop/DEBUG_SAMPLE_RATE/10.0*SEGMENT_SIZE*2<<endl;
+			cout<<"count "<<endl<<counter<<" "<<(float)counter/DEBUG_SAMPLE_RATE/10.0<<endl;
 			break;
 		}
+#else
+		if (getTimer(timer)>100'000){
+			startTimer();
+			cout<<"count "<<counter<<endl;
+			break;
+
+		}
+#endif
 		//this_tread::yield();//is it slowing down the process ?
 
 	}
@@ -121,6 +143,25 @@ void calculateSegment(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D, long tic
 	}
 		
 }
+
+double sinLut_t[10'000];
+bool sinLut_tb[10'000]{false};
+int c=0;
+double sinLut(double v){
+	double id = v/3.141592653589793238462643383279/2
+-long(v/(2*3.141592653589793238462643383279));
+	int i_id = int(id*10'000);
+	//cout<<"id :"<<id<<" "<<v/3.141592653589793238462643383279/2<<endl;
+	//cout<<long(v/(2*3.141592653589793238462643383279))<<endl;
+	//cout<<i_id<<" "<<sinLut_tb[i_id]<<endl;
+	if (!sinLut_tb[i_id]){
+		cout<<++c<<endl;
+		sinLut_t[i_id]=sin(v);
+		sinLut_tb[i_id] = true;
+	}	
+	return sinLut_t[i_id];
+}
+
 void calculate_tick(Aom1D& aom1D,Aom2D& aom2D, long tick, int16_t& buff){
 	//TODO the aom2D
 	
@@ -129,15 +170,14 @@ void calculate_tick(Aom1D& aom1D,Aom2D& aom2D, long tick, int16_t& buff){
 		const auto tw = *aom1D.tweezers[i];
 		//TODO optimize by findind t' smaller, such as wt' = wt [2pi]
 		//TODO what about the rapid phase change whene changing w?
-		sumAom1D += tw.A*tw.N*sin(tw.w*(double) tick + tw.p);
+		sumAom1D += tw.A*tw.N*sin(tw.w*(double)tick/6.0e8 + tw.p);
 	}
-	buff = MAX_VALUE * sumAom1D/aom1D.tweezerCount * aom1D.A * aom1D.N;
+	buff = MAX_VALUE * sumAom1D/aom1D.tweezerCount * aom1D.A * aom1D.N / aom1D.tweezerCount;
 	
 }
 inline int findSegmentAssociatedToTick(long tick){
 	return (long)(tick/SEGMENT_SIZE) % BUFFER_SIZE;
 }
-
 long findTickAssociatedToSegment(int segment, long lastTick){
 	int lastSegment = findSegmentAssociatedToTick(lastTick);
 	long m = (long)(lastTick/(BUFFER_SIZE*SEGMENT_SIZE));

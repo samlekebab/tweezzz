@@ -93,7 +93,7 @@ int test3(){
 	return 0;
 }
 void sequence(Aom1D& aom1D, Aom2D& aom2D){
-	cout<<"begining of the sequence"<<endl;
+	//cout<<"begining of the sequence"<<endl;
 	aom1D.A = 0.25;
 	(new Rampup({.test = 0, .duration = 500}))->connect(aom1D.A);
 }
@@ -104,13 +104,18 @@ int main(){
 	Aom1D aom1D; aom1D.A = 0.5;
 	Aom2D aom2D;
 	thread coreThread(coreCalc::startCore,ref(scheduler),ref(aom1D),ref(aom2D));
-
+	
+	double initFreq{7e7};
+	for(int i=0; i<aom1D.tweezerCount; i++){
+		aom1D.tweezers[i]->w = initFreq+i*5e5;
+	}
 
 	//run
 	thread sequence_thread(sequence, std::ref(aom1D), std::ref(aom2D));
 	
 	//end
 	coreThread.join();
+	sequence_thread.join();
 
 	cout<<"end of the program"<<endl;//this never happens
 	return 0;
