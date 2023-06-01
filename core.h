@@ -21,7 +21,8 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D);
 
 void calculateSegment(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D, long tick, int16_t* segment_buffer);
 int getCurrentCardsegment();
-void calculate_tick(Aom1D& aom1D,Aom2D& aom2D, long tick, int16_t& buff);
+void calculate_tick(const Aom1D aom1D,const Aom2D aom2D,const long tick, int16_t& buff);
+void calculate_tweezer(Aom1D& aom1D,Aom2D& aom2D,int tweezer, long initial_tick, int16_t* buff);
 long findTickAssociatedToSegment(int segement, long lastTick);
 int getCurrentCardSegment();
 void pushSegmentToCard(int segment,int16_t data);

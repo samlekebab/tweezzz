@@ -6,7 +6,7 @@ Bounds FormGenerator::connect(long tick,double& target){
 	this->target = &target;
 	if (scheduler == nullptr){
 		cout<<"error unregistered scheduler for formgenerator"<<endl;
-		throw runtime_error("unregistered scheduler"); 
+		//throw runtime_error("unregistered scheduler"); 
 	}
 	this->bounds.start = tick;
 	this->bounds.end = this->getDuration();

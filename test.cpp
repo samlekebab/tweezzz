@@ -1,14 +1,16 @@
 #include <iostream>
 #include <list>
+#include <cmath>
 using namespace std;
 int main(){
+	
 	long i=1;
-	long X=1'000'000'000;
+	long X=1'000'000;
+	double s=0;
 	for(long j=1;j<X;j++){
-		if (j!=0)
-			i*=j;
-		i++;
+		s+=sin(j*0,001)
 	}
-	cout<<i<<endl;
+
+	cout<<s<<endl;
 	return 0;
 }

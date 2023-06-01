@@ -13,7 +13,7 @@ using namespace std;
 #define MAX_TICK (10'000*960) //how far we calculate in advance the segments (should'nt influence the delay)
 #define MAX_VALUE 32767 	//max value of 16bit signed integer
 			    //
-#define file_output
+//#define file_output
 #define test_perf_mode //this mode push the code to go as fast as possible au print result (avrg sample rate, gaps etc...)
 #define no_card_connected
 #define opti_prevent
@@ -45,6 +45,8 @@ int getCurrentCardSegment(){
 	
 }
 
+float sinLut_t[10'000]{0};
+int16_t sinLut_t2[10'000]{0};
 void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 	//DEBUG
 	startTimer();
@@ -57,6 +59,9 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 #ifdef file_output
 	FILE* f = fopen("./res/cpp.txt","w");
 #endif
+	for (int i=0;i<10'000;i++){
+		sinLut_t2[i]=sin(i*0.01);
+	}
 
 	while(1){
 		//first, synchronize with the card to know where we are
@@ -81,7 +86,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 
 		//thirdly, calculate this segment, if we ar'nt over MAX_TICK
 		if (tickToCompute<currentTick+MAX_TICK){
-			int16_t buff[SEGMENT_SIZE];
+			int16_t buff[SEGMENT_SIZE]{0};
 			calculateSegment(scheduler,aom1D,aom2D,tickToCompute,buff);
 			scheduler.nextTickToCompute = tickToCompute + SEGMENT_SIZE;
 		
@@ -101,7 +106,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 				counter++;
 				sum+=buff[i];
 			}
-			if (currentTick%123456==0){
+			if (currentTick%1234567==0){
 				cout<<"surprise : "<<sum<<endl;
 			}
 #endif
@@ -115,7 +120,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 			break;
 		}
 #else
-		if (getTimer(timer)>100'000){
+		if (getTimer(timer)>10'000'000){
 			startTimer();
 			cout<<"count "<<counter<<endl;
 			break;
@@ -138,13 +143,25 @@ void calculateSegment(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D, long tic
 	scheduler.computeSample(tick);
 	//TODO balance load on multiple thread
 	//for now, we use only this thread
-	for (int i{0};i<SEGMENT_SIZE;i++){
+	
+	//solution 1, for each tick, for each tweezer
+	/*for (int i{0};i<SEGMENT_SIZE;i++){
 		calculate_tick(aom1D,aom2D,tick+i, segment_buffer[i]);
+	}*/
+
+	//solution 2, for each tweezer, for each tick
+	for (int i{0};i<aom1D.tweezerCount;i++){
+		int16_t buff[SEGMENT_SIZE];
+		calculate_tweezer(aom1D,aom2D,i,tick,buff);
+			
+		//this is cleary vectorizable	
+		for (int j=0;j<SEGMENT_SIZE;j++){
+			segment_buffer[j]+=buff[j];
+		}
 	}
 		
 }
 
-double sinLut_t[10'000];
 bool sinLut_tb[10'000]{false};
 int c=0;
 double sinLut(double v){
@@ -155,14 +172,24 @@ double sinLut(double v){
 	//cout<<long(v/(2*3.141592653589793238462643383279))<<endl;
 	//cout<<i_id<<" "<<sinLut_tb[i_id]<<endl;
 	if (!sinLut_tb[i_id]){
-		cout<<++c<<endl;
+		//cout<<++c<<endl;
 		sinLut_t[i_id]=sin(v);
 		sinLut_tb[i_id] = true;
 	}	
 	return sinLut_t[i_id];
 }
+void calculate_tweezer(Aom1D& aom1D, Aom2D& aom2D,int tweezer, long initial_tick, int16_t* buff){
+	const auto tw = *aom1D.tweezers[tweezer];
+	const int16_t f = MAX_VALUE*(tw.A*tw.N*aom1D.A*aom1D.N/aom1D.tweezerCount);
+	for (int i{0};i<SEGMENT_SIZE;i++){
+		//vectorizable with a dl approxiation of the sinus?
+		int16_t tmp  = f*sinLut_t2[1+i];//*sin(tw.w*((double)i+SEGMENT_SIZE)/6.0e8 + tw.p);
+		buff[i]= tmp;
 
-void calculate_tick(Aom1D& aom1D,Aom2D& aom2D, long tick, int16_t& buff){
+	}
+
+}
+void calculate_tick(const Aom1D aom1D,const Aom2D aom2D,const long tick, int16_t& buff){
 	//TODO the aom2D
 	
 	double sumAom1D{0.0};
@@ -170,7 +197,7 @@ void calculate_tick(Aom1D& aom1D,Aom2D& aom2D, long tick, int16_t& buff){
 		const auto tw = *aom1D.tweezers[i];
 		//TODO optimize by findind t' smaller, such as wt' = wt [2pi]
 		//TODO what about the rapid phase change whene changing w?
-		sumAom1D += tw.A*tw.N*sin(tw.w*(double)tick/6.0e8 + tw.p);
+		sumAom1D += tw.A*tw.N*sinLut(tw.w*(double)tick/6.0e8 + tw.p);
 	}
 	buff = MAX_VALUE * sumAom1D/aom1D.tweezerCount * aom1D.A * aom1D.N / aom1D.tweezerCount;
 	

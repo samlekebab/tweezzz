@@ -95,7 +95,7 @@ int test3(){
 void sequence(Aom1D& aom1D, Aom2D& aom2D){
 	//cout<<"begining of the sequence"<<endl;
 	aom1D.A = 0.25;
-	(new Rampup({.test = 0, .duration = 500}))->connect(aom1D.A);
+	(new Rampup({.test = 0, .duration = 100'000}))->connect(aom1D.A);
 }
 int main(){
 	//initialisation
