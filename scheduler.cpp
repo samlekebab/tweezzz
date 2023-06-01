@@ -27,7 +27,7 @@ long Scheduler::computeSample(long tick){
 	while(tas.getN()>0){
 		long start = ((FormGenerator*)tas.view())->bounds.start;
 		if (start>tick)
-			continue;
+			break;
 
 		auto f = (FormGenerator*)tas.pop();
 		cout<<"new form generator in the list "<<f->bounds.start<<" ; ";
