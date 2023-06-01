@@ -27,7 +27,6 @@ class Rampup:public FormGenerator{
 	//take a sampletime from the begining of and return a value between 0 and 1
 		double calc(long time){
 			
-			cout<<"target "<<*target;
 			*target = (double)time*1.0/setting.duration;
 			return *target;
 		

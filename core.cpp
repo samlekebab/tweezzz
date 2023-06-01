@@ -7,17 +7,18 @@ using namespace std;
 #include <stdio.h>
 #include <cstdio>
 //card contains 2GSample memory 
-#define SEGMENT_SIZE 6//DEBGUG 96 //number of sample per segment
+#define SEGMENT_SIZE 96 //number of sample per segment
 #define BUFFER_SIZE 500'000  //number of segment in a cyclic buffer
-#define SAFE_TICK (6*4)//DEBUG (3125*96)     //min delay (in ticks) between a push to the card and the actual play (directly related to the delay)
-#define MAX_TICK (6*10)//DEBUG (10000*96) //how far we calculate in advance the segments (should'nt influence the delay)
+#define SAFE_TICK (3125*96)     //min delay (in ticks) between a push to the card and the actual play (directly related to the delay)
+#define MAX_TICK (10'000*96) //how far we calculate in advance the segments (should'nt influence the delay)
 #define MAX_VALUE 32767 	//max value of 16bit signed integer
 			    //
-#define file_output
+//#define file_output
 #define no_card_connected
+#define opti_prevent
 namespace coreCalc{
 //DEBUG
-#define DEBUG_SAMPLE_RATE 20
+#define DEBUG_SAMPLE_RATE 600'000'000
 chrono::time_point<chrono::system_clock> timer;
 void startTimer(){
 	cout<<"timer start"<<endl;
@@ -29,7 +30,7 @@ long getTimer(chrono::time_point<chrono::system_clock> timer){
 int getCurrentCardSegment(){
 	//TODO get the current card Segment
 #ifdef no_card_connected
-	return (int)(getTimer(timer)/1'000'000.0*DEBUG_SAMPLE_RATE);
+	return (int)(getTimer(timer)/1'000'000.0*DEBUG_SAMPLE_RATE/(float)SEGMENT_SIZE)%BUFFER_SIZE;
 #endif
 	
 }
@@ -40,6 +41,8 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 	cout<<"a "<<getTimer(timer)<<endl;
 	long currentTick{0};//estimated current tick played on the card
 	int currentSegment{0};//current segment played on the card
+	long sum=0;
+	long drop=0;
 #ifdef file_output
 	FILE* f = fopen("./res/cpp.txt","w");
 #endif
@@ -58,7 +61,8 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 		long tickToCompute = scheduler.nextTickToCompute;
 		tickToCompute = max(currentTick+SAFE_TICK,tickToCompute);
 		if (tickToCompute == currentTick + SAFE_TICK){
-			printf("dropping at tick %d\n",tickToCompute);
+			//printf("dropping at tick %d\n",tickToCompute);
+			drop++;
 		}
 		tickToCompute = (int)(tickToCompute/SEGMENT_SIZE)*SEGMENT_SIZE;//put back at the begging of a segment
 		
@@ -78,13 +82,24 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 				fprintf(f,"%d\n",buff[i]);
 			}
 			fflush(f);
-		}
-
 #endif
+
+
+#ifdef opti_prevent
+			for (int i{0};i<SEGMENT_SIZE;i++){
+				sum+=buff[i];
+			}
+			if (currentTick%123456==0){
+				cout<<"surprise : "<<sum<<endl;
+			}
+#endif
+		}
 		//DEBUG
-		//this_thread::sleep_for(50ms);
-		if (currentTick>10'000)
-			continue;
+		//this_thread::sleep_for(500ms);
+		if (currentTick>DEBUG_SAMPLE_RATE*(long)10){
+			cout<<"end"<<endl<<drop<<" "<<(float)drop/DEBUG_SAMPLE_RATE/10<<endl;
+			break;
+		}
 		//this_tread::yield();//is it slowing down the process ?
 
 	}
@@ -125,11 +140,11 @@ inline int findSegmentAssociatedToTick(long tick){
 
 long findTickAssociatedToSegment(int segment, long lastTick){
 	int lastSegment = findSegmentAssociatedToTick(lastTick);
-	long m = (long)(lastTick/SEGMENT_SIZE);
+	long m = (long)(lastTick/(BUFFER_SIZE*SEGMENT_SIZE));
 	//printf("seg %d, last seg %d, m %d, lastT %d\n",segment,lastSegment,m,lastTick);
 	if(segment<lastSegment){
 		m+=1;
 	}
-	return (m+(long)segment-lastSegment)*SEGMENT_SIZE;
+	return (m*BUFFER_SIZE+(long)segment)*SEGMENT_SIZE;
 }
 }
