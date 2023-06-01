@@ -46,7 +46,7 @@ int getCurrentCardSegment(){
 }
 
 float sinLut_t[10'000]{0};
-int16_t sinLut_t2[10'000]{0};
+float sinLut_t2[10'000]{0};
 void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 	//DEBUG
 	startTimer();
