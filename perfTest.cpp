@@ -26,7 +26,7 @@ class Rampup:public FormGenerator{
 		}
 	//take a sampletime from the begining of and return a value between 0 and 1
 		double calc(long time){
-			
+			cout<<"target "<<*target<<endl;
 			*target = (double)time*1.0/setting.duration;
 			return *target;
 		
@@ -105,7 +105,7 @@ int main(){
 	Aom2D aom2D;
 	thread coreThread(coreCalc::startCore,ref(scheduler),ref(aom1D),ref(aom2D));
 	
-	double initFreq{7e7};
+	double initFreq{67e6};
 	for(int i=0; i<aom1D.tweezerCount; i++){
 		aom1D.tweezers[i]->w = initFreq+i*5e5;
 	}

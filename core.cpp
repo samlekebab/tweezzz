@@ -6,14 +6,16 @@ using namespace std;
 #include <iostream>
 #include <stdio.h>
 #include <cstdio>
+#include "mmath.h"
+
 //card contains 2GSample memory 
 #define SEGMENT_SIZE 960 //number of sample per segment
 #define BUFFER_SIZE 500'000  //number of segment in a cyclic buffer
-#define SAFE_TICK (3125*960)     //min delay (in ticks) between a push to the card and the actual play (directly related to the delay)
+#define SAFE_TICK 0//DEBUG(3125*960)     //min delay (in ticks) between a push to the card and the actual play (directly related to the delay)
 #define MAX_TICK (10'000*960) //how far we calculate in advance the segments (should'nt influence the delay)
 #define MAX_VALUE 32767 	//max value of 16bit signed integer
 			    //
-//#define file_output
+#define file_output
 #define test_perf_mode //this mode push the code to go as fast as possible au print result (avrg sample rate, gaps etc...)
 #define no_card_connected
 #define opti_prevent
@@ -49,7 +51,6 @@ float sinLut_t[10'000]{0};
 float sinLut_t2[10'000]{0};
 void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 	//DEBUG
-	startTimer();
 	cout<<"a "<<getTimer(timer)<<endl;
 	long currentTick{0};//estimated current tick played on the card
 	int currentSegment{0};//current segment played on the card
@@ -62,12 +63,16 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 	for (int i=0;i<10'000;i++){
 		sinLut_t2[i]=sin(i*0.01);
 	}
+	
+	//preparing the luts for "all" sin at all frequency
+	mmath::fillUpTable();
 
+
+	startTimer();
 	while(1){
 		//first, synchronize with the card to know where we are
 		currentSegment = getCurrentCardSegment();//is this operation "synchron", is it slow? maybe not do it every time and estimated it with the computer clock instead? (need to look at the deviation)
 		currentTick = findTickAssociatedToSegment(currentSegment,currentTick);
-
 		//cout<<"current segment "<<currentSegment<<endl;
 		//cout<<"currentTick "<<currentTick<<endl;
 		
@@ -120,7 +125,8 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 			break;
 		}
 #else
-		if (getTimer(timer)>10'000'000){
+		//if (getTimer(timer)>1'000){
+		if (currentTick>50'000){
 			startTimer();
 			cout<<"count "<<counter<<endl;
 			break;
@@ -152,11 +158,11 @@ void calculateSegment(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D, long tic
 	//solution 2, for each tweezer, for each tick
 	for (int i{0};i<aom1D.tweezerCount;i++){
 		int16_t buff[SEGMENT_SIZE];
-		calculate_tweezer(aom1D,aom2D,i,tick,buff);
+		calculate_tweezer(aom1D,aom2D,i,tick,segment_buffer);
 			
 		//this is cleary vectorizable	
 		for (int j=0;j<SEGMENT_SIZE;j++){
-			segment_buffer[j]+=buff[j];
+			//segment_buffer[j]+=buff[j];
 		}
 	}
 		
@@ -180,11 +186,23 @@ double sinLut(double v){
 }
 void calculate_tweezer(Aom1D& aom1D, Aom2D& aom2D,int tweezer, long initial_tick, int16_t* buff){
 	const auto tw = *aom1D.tweezers[tweezer];
+	const auto w{tw.w},p{tw.p};
 	const int16_t f = MAX_VALUE*(tw.A*tw.N*aom1D.A*aom1D.N/aom1D.tweezerCount);
+	const int b=mmath::lut(w);
+	//find the phase
+	int t2 = fmod(initial_tick,600'000'000/(float)w);
+	//TODO convert and add fixed phase p
+
+	const float* table = &mmath::sin[b+t2];
+	
 	for (int i{0};i<SEGMENT_SIZE;i++){
 		//vectorizable with a dl approxiation of the sinus?
-		int16_t tmp  = f*sinLut_t2[1+i];//*sin(tw.w*((double)i+SEGMENT_SIZE)/6.0e8 + tw.p);
-		buff[i]= tmp;
+		//or with lut like i tryed
+		int16_t tmp  = f * table[i]; 
+		/*sinLut_t2[1+i]; //sin(w*((double)i+SEGMENT_SIZE)/6.0e8 + p);*/
+
+
+		buff[i]+= tmp;
 
 	}
 

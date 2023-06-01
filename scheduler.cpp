@@ -23,6 +23,7 @@ long Scheduler::nextSampleToCompute(){return 0;}//TODO ???
 						//
 long Scheduler::computeSample(long tick){
 	//lock_guard<mutex> scheduler_lock(this->usingScheduler_mutex);
+	//cout<<"tick "<<tick<<endl;
 	//first, we pop the heap
 	while(tas.getN()>0){
 		long start = ((FormGenerator*)tas.view())->bounds.start;
@@ -45,16 +46,18 @@ long Scheduler::computeSample(long tick){
 		}*///can't do that because this is not called at every tick
 		  //this is can be an issue for the rewind process : need solution
 		  //reminder : the rewind process will allow the computer to clear computational power for the branch prediction (wich needs temporaly 2times more ressources)
-		  
+
+		(*it)->calc(tick - (*it)->bounds.start);
+
 		if ((*it)->bounds.end < tick){
-			cout<<"removing a generator"<<endl;
+			cout<<"removing a generator at"<<tick<<endl;
 			delete *it;//BUG TODO see above 
 			auto tmp = it;
 			++it;
 			activeGenerators.erase(tmp);
 		}else{
-			(*it)->calc(tick - (*it)->bounds.start);
 			++it;
+			
 		}
 	}
 	return 0;
