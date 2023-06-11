@@ -25,7 +25,7 @@ class Rampup:public FormGenerator{
 			return setting.duration;
 		}
 	//take a sampletime from the begining of and return a value between 0 and 1
-		double calc(long time){
+		float calc(long time){
 			cout<<"target "<<*target<<endl;
 			*target = (double)time*1.0/setting.duration;
 			return *target;
@@ -33,7 +33,7 @@ class Rampup:public FormGenerator{
 		}
 		//if we want to take the value at the beginning to adapte our calculation
 		
-		void setBeginningValue(double value){}
+		void setBeginningValue(float value){}
 
 
 
@@ -103,6 +103,7 @@ int main(){
 	FormGenerator::scheduler = &scheduler;
 	Aom1D aom1D; aom1D.A = 0.5;
 	Aom2D aom2D;
+	printf("tw0->A %f",aom1D.table);
 	thread coreThread(coreCalc::startCore,ref(scheduler),ref(aom1D),ref(aom2D));
 	
 	double initFreq{67e6};
@@ -111,11 +112,11 @@ int main(){
 	}
 
 	//run
-	thread sequence_thread(sequence, std::ref(aom1D), std::ref(aom2D));
+	//thread sequence_thread(sequence, std::ref(aom1D), std::ref(aom2D));
 	
 	//end
 	coreThread.join();
-	sequence_thread.join();
+	//sequence_thread.join();
 
 	cout<<"end of the program"<<endl;//this never happens
 	return 0;

@@ -2,7 +2,7 @@
 #include <stdexcept>
 #include <iostream>
 using namespace std;
-Bounds FormGenerator::connect(long tick,double& target){
+Bounds FormGenerator::connect(long tick,float& target){
 	this->target = &target;
 	if (scheduler == nullptr){
 		cout<<"error unregistered scheduler for formgenerator"<<endl;
@@ -14,10 +14,10 @@ Bounds FormGenerator::connect(long tick,double& target){
 	scheduler->addFormGenerator(this);
 	return this->bounds;
 }
-Bounds FormGenerator::connect(double& target){
+Bounds FormGenerator::connect(float& target){
 	return this->connectRelative(0,target);
 }
-Bounds FormGenerator::connectRelative(long tick,double& target){
+Bounds FormGenerator::connectRelative(long tick,float& target){
 	return connect(scheduler->EOFT+tick,target);
 }
 FormGenerator::~FormGenerator(){}
