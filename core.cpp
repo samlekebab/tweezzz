@@ -8,15 +8,13 @@ using namespace std;
 #include <cstdio>
 #include "mmath.h"
 
-//card contains 2GSample memory 
-#define SEGMENT_SIZE 960 //number of sample per segment
-#define BUFFER_SIZE 500'000  //number of segment in a cyclic buffer
-#define SAFE_TICK 0//DEBUG(3125*960)     //min delay (in ticks) between a push to the card and the actual play (directly related to the delay)
-#define MAX_TICK (10'000*960) //how far we calculate in advance the segments (should'nt influence the delay)
-#define MAX_VALUE 32767 	//max value of 16bit signed integer
+
+#include "setting.h"
+
+
 			    //
-#define file_output
-#define test_perf_mode //this mode push the code to go as fast as possible au print result (avrg sample rate, gaps etc...)
+//#define file_output
+#define test_perf_mode //this mode push the code to go as fast as possible au print result 
 #define no_card_connected
 #define opti_prevent
 namespace coreCalc{
@@ -91,7 +89,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 
 		//thirdly, calculate this segment, if we ar'nt over MAX_TICK
 		if (tickToCompute<currentTick+MAX_TICK){
-			int16_t buff[SEGMENT_SIZE]{0};
+			int16_t buff[4*SEGMENT_SIZE]{0};
 			calculateSegment(scheduler,aom1D,aom2D,tickToCompute,buff);
 			scheduler.nextTickToCompute = tickToCompute + SEGMENT_SIZE;
 		
@@ -109,9 +107,9 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 #ifdef opti_prevent
 			for (int i{0};i<SEGMENT_SIZE;i++){
 				counter++;
-				sum+=buff[i];
+				sum+=buff[4*i];
 			}
-			if (currentTick%1234567==0){
+			if (sum%1234567==0){
 				cout<<"surprise : "<<sum<<endl;
 			}
 #endif
@@ -125,8 +123,8 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 			break;
 		}
 #else
-		//if (getTimer(timer)>1'000){
-		if (currentTick>50'000){
+		if (getTimer(timer)>10'000'000){
+		//if (currentTick>50'000){
 			startTimer();
 			cout<<"count "<<counter<<endl;
 			break;
@@ -157,13 +155,8 @@ void calculateSegment(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D, long tic
 
 	//solution 2, for each tweezer, for each tick
 	for (int i{0};i<aom1D.tweezerCount;i++){
-		int16_t buff[SEGMENT_SIZE];
 		calculate_tweezer(aom1D,aom2D,i,tick,segment_buffer);
 			
-		//this is cleary vectorizable	
-		for (int j=0;j<SEGMENT_SIZE;j++){
-			//segment_buffer[j]+=buff[j];
-		}
 	}
 		
 }
@@ -202,7 +195,7 @@ void calculate_tweezer(Aom1D& aom1D, Aom2D& aom2D,int tweezer, long initial_tick
 		/*sinLut_t2[1+i]; //sin(w*((double)i+SEGMENT_SIZE)/6.0e8 + p);*/
 
 
-		buff[i]+= tmp;
+		buff[4*i] += tmp;
 
 	}
 
