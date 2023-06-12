@@ -4,6 +4,7 @@
 #include <cmath>
 #include <thread>
 #include <chrono>
+#include "setting.h"
 CoreGPU::CoreGPU(){
 	//DEBUG 
 	//create dummmy sin TODO replace by the sin lut of mmath
@@ -112,11 +113,12 @@ int CoreGPU::initCl(const char *programPath,const char *kernelName, cl_kernel& k
 		return -1;
 	}	
 
+	//TODO replace hard coded value to tweezerCount and nbOfParam
 	cl_aomBuffer = clCreateBuffer(context,
 			CL_MEM_READ_ONLY
 			|CL_MEM_HOST_WRITE_ONLY
 			,
-			100*4*sizeof(float),NULL,&cl_err);
+			100*5*sizeof(float)*(SEGMENT_SIZE/BATCH_SIZE),NULL,&cl_err);
 
 	if (cl_err == CL_SUCCESS)
 		printf("aom buffer created\n");
@@ -154,7 +156,6 @@ int CoreGPU::loadCoreKernel(){
 	cl_err = clSetKernelArg(kernel,1,sizeof(int16_t*),&cl_outBuffer);
 	cl_err = clSetKernelArg(kernel,2,sizeof(float*),&cl_aomBuffer);
 	cl_err = clSetKernelArg(kernel,3,sizeof(float*),&cl_sinBuffer);
-	//TODO pass the lut of sinus to kernel
 	
 	if (cl_err == CL_SUCCESS)
 		printf("set kernel arg\n");
@@ -165,15 +166,13 @@ int CoreGPU::loadCoreKernel(){
 	return 0;
 }
 int16_t* CoreGPU::calculate(long tick){
-	//DEBUG, dummy calculation for now
-	//TODO
 
 		size_t workOffset[]{0};
 
 		phase+=workSize*0.1f16;
 		clSetKernelArg(kernel,0,sizeof(float),&phase);	
 
-		auto tmp = workSize;//because worksize is static const, no derefencing possible.
+		auto tmp = workSize;//because worksize is static const, no dereferencing possible.
 		clEnqueueNDRangeKernel(queue,kernel,1,workOffset,&tmp,NULL,0,NULL,NULL);
 		cl_int cl_err = clEnqueueReadBuffer(queue,cl_outBuffer,CL_TRUE,0,workSize*sizeof(int16_t),outBuffer,0,NULL,NULL);
 		//printf("read(%i)\n", cl_err);
@@ -181,16 +180,25 @@ int16_t* CoreGPU::calculate(long tick){
 //			for (size_t i=0;i<960;i++){
 //				printf("res %d : %d\n",i,outBuffer[i]);
 //			}
-		return (int16_t*) outBuffer;//DEBUG
+		return outBuffer;
 
 
 
 }
 
-int CoreGPU::setParams(Aom1D& aom1D,Aom2D& aom2D){
-								//TODO this 4 is the number of params of a tweezer, not great to hard code it like that : 
-								//if it changes some day we will probably forget to change this value... 
-	return clEnqueueWriteBuffer(queue,cl_aomBuffer,CL_TRUE,0,aom1D.tweezerCount*4*sizeof(float),aom1D.table,0,NULL,NULL);//wtf putting cl_false(asynchrone load) kills the performances !?
+int CoreGPU::setParams(Aom1D& aom1D,Aom2D& aom2D, int j){
+	//TODO this 4 is the number of params of a tweezer, not great to hard code it like that : 
+	//if it changes some day we will probably forget to change this value... 
+	//hahaha it happened, now i correct it but i left this comment because it makes me laugh
+	for(int i=0;i<(SEGMENT_SIZE/BATCH_SIZE);i++){
+	int length = aom1D.tweezerCount*Tweezer::nbOfParam*sizeof(float);
+	clEnqueueWriteBuffer(queue,cl_aomBuffer,CL_TRUE,0,
+			length,
+			aom1D.table,
+			0,NULL,NULL);//wtf putting cl_false(asynchrone load) kills the performances !?
+	}
+	
 	//TODO the tables of aom2D
 
+	return 0;
 }

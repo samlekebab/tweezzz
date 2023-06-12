@@ -13,8 +13,8 @@
 using namespace std;
 
 
-#define file_output
-#define once//to debug, no core loop
+//#define file_output
+//#define once//to debug, no core loop
 #define test_perf_mode //this mode push the code to go as fast as possible au print result 
 #define DEBUG_SAMPLE_RATE 100'000
 
@@ -269,7 +269,19 @@ long findTickAssociatedToSegment(int segment, long lastTick){
 }
 
 int16_t* calculateGPU(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D,long tickToCompute,CoreGPU& gpu){
-	gpu.setParams(aom1D,aom2D);
+	
+		//compute the accumulated phase during a batch
+		/*
+		for(int j=0;j<100;j++){//TODO hard codded tweezer number
+			float& pr = aom1D.tweezers[j]->pr ;
+			float& w = aom1D.tweezers[j]->w ;
+			//pr += fmod(w * (2*3.14159*BATCH_SIZE/SAMPLE_RATE)  , 2*3.14159);
+	//		printf("pr%d : %f\n",j,w);
+		}*/
+		//send it to the gpu
+		gpu.setParams(aom1D,aom2D, 0);
+	
+	//calculate the segment
 	return gpu.calculate(tickToCompute);
 	
 }
