@@ -8,16 +8,18 @@ void compute(float phase,__global short* output,__global float* GaomTable, __glo
 	batch_number = get_global_id(0)/BATCH_SIZE;
 
 	//printf("phase %f\n",(float)phase);
-	const short tweezerCount =64;//TODO replace with non hard coded, with tweezerCount 
+	const short tweezerCount =100;//TODO replace with non hard coded, with tweezerCount 
 	const short nbOfParam = 5;
 	float res = 0;
-	__local float localAomTableA[100];
-	__local float localAomTableN[100];
-	__local float localAomTableW[100];
-	__local float localAomTableP[100];
-	__local float localAomTablePR[100];
+	__local float localAomTableA[tweezerCount ];
+	__local float localAomTableN[tweezerCount ];
+	__local float localAomTableW[tweezerCount ];
+	__local float localAomTableP[tweezerCount ];
+	__local float localAomTablePR[tweezerCount ];
 
-	__global float* aomTable = &GaomTable[batch_number*nbOfParam*tweezerCount];
+	barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);//I don't understand why the barrier impove the performance
+	//printf("global aomtable index %d\n",batch_number*nbOfParam*tweezerCount);
+	__global float* aomTable = &GaomTable[batch_number*nbOfParam*tweezerCount];//if there is no barrier, this line is reducing a lot the performances.
 	for (int i=0;i<tweezerCount ;i++){
 		localAomTableA[i] = aomTable[i];
 	 }
@@ -31,7 +33,7 @@ void compute(float phase,__global short* output,__global float* GaomTable, __glo
 	for (int i=0;i<tweezerCount ;i++){
 		localAomTableP[i] = aomTable[i+3*tweezerCount ];
 		//printf("p%d : %f\n",i,localAomTableP[i] );
-	 }
+	}
 	for (int i=0;i<tweezerCount ;i++){
 		localAomTablePR[i] = aomTable[i+4*tweezerCount ];
 	 }

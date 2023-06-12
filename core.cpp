@@ -13,8 +13,8 @@
 using namespace std;
 
 
-//#define file_output
-//#define once//to debug, no core loop
+#define file_output
+#define once//to debug, no core loop
 #define test_perf_mode //this mode push the code to go as fast as possible au print result 
 #define DEBUG_SAMPLE_RATE 100'000
 
@@ -112,7 +112,9 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 		//cout<<"currentTick "<<currentTick<<endl;
 		
 		//secondly, ask the sheduler what tick should be calculated next, convert it into a segment, check with SAFE_SEGMENT to deduce the segment to calculate
-		//from now on, the scheduler will be locked
+
+		//lock the scheduler
+		//TODO release the scheduler before starting the calculation on the GPU(or CPU)
 		const lock_guard<mutex> scheduler_lock(scheduler.usingScheduler_mutex);
 		long tickToCompute = scheduler.nextTickToCompute;
 		tickToCompute = max(currentTick+SAFE_TICK,tickToCompute);
@@ -270,17 +272,19 @@ long findTickAssociatedToSegment(int segment, long lastTick){
 
 int16_t* calculateGPU(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D,long tickToCompute,CoreGPU& gpu){
 	
+	for(int i=0;i<(SEGMENT_SIZE/BATCH_SIZE);i++){
+		//recompute the scheduler: 
+		scheduler.computeSample(tickToCompute + i*BATCH_SIZE);
 		//compute the accumulated phase during a batch
-		/*
 		for(int j=0;j<100;j++){//TODO hard codded tweezer number
 			float& pr = aom1D.tweezers[j]->pr ;
 			float& w = aom1D.tweezers[j]->w ;
-			//pr += fmod(w * (2*3.14159*BATCH_SIZE/SAMPLE_RATE)  , 2*3.14159);
-	//		printf("pr%d : %f\n",j,w);
-		}*/
+			pr += fmod(w * (2*3.14159*BATCH_SIZE/SAMPLE_RATE)  , 2*3.14159);
+			//printf("pr%d : %f\n",j,w);
+		}
 		//send it to the gpu
-		gpu.setParams(aom1D,aom2D, 0);
-	
+		gpu.setParams(aom1D,aom2D,i);
+	}
 	//calculate the segment
 	return gpu.calculate(tickToCompute);
 	
