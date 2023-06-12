@@ -29,7 +29,8 @@ int CoreGPU::initCl(const char *programPath,const char *kernelName, cl_kernel& k
 	}
 	cl_device_id device_id[3];
 	cl_uint numDevices;
-	cl_err = clGetDeviceIDs(plt_id[0],CL_DEVICE_TYPE_GPU,3,device_id,&numDevices);
+	int plt = 1;
+	cl_err = clGetDeviceIDs(plt_id[plt],CL_DEVICE_TYPE_GPU,3,device_id,&numDevices);
 
 	if (cl_err == CL_SUCCESS)
 		printf("%u device(s) found\n", numDevices);

@@ -13,8 +13,8 @@
 using namespace std;
 
 
-#define file_output
-#define once//to debug, no core loop
+//#define file_output
+//#define once//to debug, no core loop
 #define test_perf_mode //this mode push the code to go as fast as possible au print result 
 #define DEBUG_SAMPLE_RATE 100'000
 
