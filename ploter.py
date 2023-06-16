@@ -119,7 +119,7 @@ Y = []
 for line in f:
     Y.append(int(line))
 ###
-plt.plot(Y)
+plt.plot(Y[:1000])
 plt.show()
 ###
 Yf = FFTy(Y,len(Y),1)

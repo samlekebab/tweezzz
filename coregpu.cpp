@@ -104,7 +104,7 @@ int CoreGPU::initCl(const char *programPath,const char *kernelName, cl_kernel& k
 	buffer = clCreateBuffer(context,
 			CL_MEM_WRITE_ONLY
 			|CL_MEM_HOST_READ_ONLY
-			|CL_MEM_USE_HOST_PTR,
+			|CL_MEM_USE_HOST_PTR ,
 			buffSize,hostBuff,&cl_err);
 
 	if (cl_err == CL_SUCCESS)
@@ -168,6 +168,7 @@ int CoreGPU::loadCoreKernel(){
 }
 int16_t* CoreGPU::calculate(long tick, int16_t* buffer){
 
+		//printf("YYYYYYYYYYYYYYYY\n");
 		size_t workOffset[]{0};
 
 		phase+=workSize*0.1f16;
@@ -175,15 +176,14 @@ int16_t* CoreGPU::calculate(long tick, int16_t* buffer){
 
 		auto tmp = workSize;//because worksize is static const, no dereferencing possible.
 		clEnqueueNDRangeKernel(queue,kernel,1,workOffset,&tmp,NULL,0,NULL,NULL);
-		cl_int cl_err = clEnqueueReadBuffer(queue,cl_outBuffer,CL_TRUE,0,workSize*sizeof(int16_t),buffer,0,NULL,NULL);
+		cl_int cl_err = clEnqueueReadBuffer(queue,cl_outBuffer,CL_TRUE,0,workSize*sizeof(int16_t),outBuffer,0,NULL,NULL);
+		//printf("XXXXXXXXXXXXXXXX\n");
 		//printf("read(%i)\n", cl_err);
 		//printf("a : gpu outbuffer 0 %d\n",outBuffer[938]);
 //			for (size_t i=0;i<960;i++){
 //				printf("res %d : %d\n",i,outBuffer[i]);
 //			}
-		return buffer;
-
-
+		return outBuffer;
 
 }
 

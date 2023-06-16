@@ -3,6 +3,7 @@
 #include <cmath>
 Card::Card(){
 	initCard();
+	initTransfert();
 }
 Card::~Card(){
 	spcm_vClose(hDrv);
@@ -89,7 +90,7 @@ void Card::initTransfert(){
 		//creating the buffer
 		buffer = (int16*)malloc(bufsizeInSamples * sizeof(int16)); 
 		for (int i=0;i<bufsizeInSamples;i++){
-			buffer[i]=0;//initialize buffer
+			buffer[i]=-30000;//initialize buffer
 		}
 
 		spcm_dwDefTransfer_i64(hDrv, SPCM_BUF_DATA, SPCM_DIR_PCTOCARD, 8*1024,

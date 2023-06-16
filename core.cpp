@@ -13,14 +13,6 @@
 using namespace std;
 
 
-//#define file_output
-//#define once//to debug, no core loop
-#define test_perf_mode //this mode push the code to go as fast as possible au print result 
-#define DEBUG_SAMPLE_RATE 100'000
-
-#define GPU_calculation
-//#define no_card_connected //no card is connected : use only the pc clock to get the current card segment
-//#define opti_prevent //just dum calculation to make sure the compiler does'nt generate code that overestimate the performances.
 namespace coreCalc{
 
 
@@ -53,6 +45,7 @@ int getCurrentCardSegment(){
 #else
 int getCurrentCardSegment(Card& card){
 	card.updateEstimation();
+	//printf("estimated card tick : %ld\n",card.tick);
 	return (card.tick/(long)SEGMENT_SIZE)%BUFFER_SIZE;
 }
 #endif
@@ -109,13 +102,18 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 
 #ifdef no_card_connected
 	startTimer();
-	printf("start\n");
+	//printf("start\n");
 #else
+	card.start();
 #endif
 
 	while(1){
 		//first, synchronize with the card to know where we are
-		currentSegment = getCurrentCardSegment();//is this operation "synchron", is it slow? maybe not do it every time and estimated it with the computer clock instead? (need to look at the deviation)
+#ifdef no_card_connected
+		currentSegment = getCurrentCardSegment();
+#else
+		currentSegment = getCurrentCardSegment(card);
+#endif
 		currentTick = findTickAssociatedToSegment(currentSegment,currentTick);
 		//cout<<"current segment "<<currentSegment<<endl;
 		//cout<<"currentTick "<<currentTick<<endl;
@@ -128,7 +126,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 		long tickToCompute = scheduler.nextTickToCompute;
 		tickToCompute = max(currentTick+SAFE_TICK,tickToCompute);
 		if (tickToCompute == currentTick + SAFE_TICK){
-			//printf("dropping at tick %d\n",tickToCompute);
+			printf("dropping at tick %d\n",tickToCompute);
 			drop++;
 		}
 		tickToCompute = (int)(tickToCompute/SEGMENT_SIZE)*SEGMENT_SIZE;//put back at the begging of a segment
@@ -138,14 +136,18 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 		//thirdly, calculate this segment, if we ar'nt over MAX_TICK
 		if (tickToCompute<currentTick+MAX_TICK){
 #ifdef no_card_connected
-			int16_t buff[4*SEGMENT_SIZE]{0};
+			int16_t buff[SEGMENT_SIZE]{0};
 #else 
-			int16_t* buff = &card.buffer[findSegmentAssociatedToTick(tickToCompute)];
+			int tickOfBuffer = findSegmentAssociatedToTick(tickToCompute)*SEGMENT_SIZE;
+			int16_t* buff = &card.buffer[tickOfBuffer];
 #endif
 
 #ifdef GPU_calculation
-			buff = calculateGPU(scheduler,aom1D,aom2D,tickToCompute,gpu2,buff);
-			//printf("b %d : gpu outbuffer 0 %d\n",counter,buff[938]);
+			int16_t* toCopy = calculateGPU(scheduler,aom1D,aom2D,tickToCompute,gpu2,gpu2.outBuffer);
+			for (int i=0;i<SEGMENT_SIZE;i++){
+				//printf("yyi %d\n",i);
+				buff[i] = toCopy[i];
+			}
 #else
 			calculateCPU(scheduler, aom1D, aom2D, tickToCompute, buff);
 #endif
@@ -178,8 +180,10 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 			counter+=SEGMENT_SIZE;
 #endif
 
+		}else{
+			printf("max tick reached\n");
 		}
-
+#ifdef no_card_connected
 #ifndef test_perf_mode
 		if (currentTick>DEBUG_SAMPLE_RATE*(long)10){//10 seconds
 			cout<<"end"<<endl<<drop<<" "<<(float)drop/DEBUG_SAMPLE_RATE/10.0*SEGMENT_SIZE*2<<endl;
@@ -197,6 +201,8 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 
 		}
 #endif
+#endif
+
 #ifdef once
 		break;
 #endif
@@ -292,12 +298,14 @@ int16_t* calculateGPU(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D,long tick
 		for(int j=0;j<100;j++){//TODO hard codded tweezer number
 			float& pr = aom1D.tweezers[j]->pr ;
 			float& w = aom1D.tweezers[j]->w ;
+			float& a = aom1D.tweezers[j]->A ;
 			pr += fmod(w * (2*3.14159*BATCH_SIZE/SAMPLE_RATE)  , 2*3.14159);
-			//printf("pr%d : %f\n",j,w);
+			//printf("pr%d : %f\n",j,a);
 		}
 		//send it to the gpu
 		gpu.setParams(aom1D,aom2D,i);
 	}
+	//printf("WWWWWWWWWWWWWWWW\n");
 	//calculate the segment
 	return gpu.calculate(tickToCompute, buffer);
 	

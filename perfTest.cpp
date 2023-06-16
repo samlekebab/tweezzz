@@ -141,6 +141,11 @@ int initAndStart(){
 	Scheduler scheduler;
 	FormGenerator::scheduler = &scheduler;
 	Aom1D aom1D; aom1D.A = 0.5;
+	aom1D.tweezers[0]->A = 0.5;
+
+	for (int i=1;i<100;i++){
+		aom1D.tweezers[i]->A = 0.0;
+	}
 	Aom2D aom2D;
 	printf("tw0->A %f\n",aom1D.table);
 	thread coreThread(coreCalc::startCore,ref(scheduler),ref(aom1D),ref(aom2D));
