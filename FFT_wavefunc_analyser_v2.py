@@ -1,5 +1,3 @@
-###
-
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.fft import fft, fftfreq
@@ -76,11 +74,11 @@ def staticFFT(wavefunc, N, sr, min_freq, max_freq):
 
 	plt.show()
 
-## TEST SCRIPT ##
+##### TEST SCRIPT #####
 test = False
 if test:
 	SampleRate = 600000000.0
-	Freq1 = 10.0e6 #10MHz
+	Freq1 = 10.0e6 #100MHz
 	Freq2 = 20.0e6
 	DurationOfSignal = 0.2e-4
 	N_measure = int(DurationOfSignal * SampleRate)
@@ -113,17 +111,3 @@ if test:
 	"""
 
 	dynamicalFFT(wavefunc, SampleRate, 0.1e-4, 0.01e-4, 50e6)
-###
-f = open("res/cpp.txt")
-Y = []
-for line in f:
-    Y.append(int(line))
-###
-plt.plot(Y)
-plt.show()
-###
-Yf = FFTy(Y,len(Y),1)
-Xf = FFTx(len(Y)/600,600)
-plt.plot(Xf,Yf)
-plt.show()
-###

@@ -1,5 +1,5 @@
-#ifndef MY_HEADER_H_INC
-#define MY_HEADER_H_INC
+#ifndef MMATH
+#define MMATH
 #define SIN_TAB_SIZE 10'000
 #define LENGTH_PER_FREQ 2000
 #include "setting.h"

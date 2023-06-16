@@ -37,7 +37,7 @@ class Rampup:public FormGenerator{
 			return setting.duration;
 		}
 	//take a sampletime from the begining of and return a value between 0 and 1
-		double calc(long time){
+		float calc(long time){
 			cout<<"target "<<*target<<endl;
 			*target = (double)time*1.0/setting.duration;
 			return *target;
@@ -45,7 +45,7 @@ class Rampup:public FormGenerator{
 		}
 		//if we want to take the value at the beginning to adapte our calculation
 		
-		void setBeginningValue(double value){}
+		void setBeginningValue(float value){}
 
 
 
@@ -125,8 +125,6 @@ void vCalcOrLoadData(int16* buff, long long size,float amplitude) {
 		buff[i] = 3200 * mmath::sin[f+i% SIN_TAB_SIZE] * amplitude;
 		tick++;
 	}
-	
-}
 void ondulation(int16* buff, long long size) {
 	auto timer = startTimer();
 	mmath::fillUpTable();
@@ -137,6 +135,27 @@ void ondulation(int16* buff, long long size) {
 	}
 
 }
+
+int initAndStart(){
+	//initialisation
+	Scheduler scheduler;
+	FormGenerator::scheduler = &scheduler;
+	Aom1D aom1D; aom1D.A = 0.5;
+	Aom2D aom2D;
+	printf("tw0->A %f",aom1D.table);
+	thread coreThread(coreCalc::startCore,ref(scheduler),ref(aom1D),ref(aom2D));
+	//run
+	//thread sequence_thread(sequence, std::ref(aom1D), std::ref(aom2D));
+	
+	//end
+	coreThread.join();
+	//sequence_thread.join();
+
+	cout<<"end of the program"<<endl;//this never happens
+	return 0;
+	
+}
+
 #define SAMPLE_RATE 400'000'000
 int main() {
 //		SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS); //for windaub
