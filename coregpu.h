@@ -28,6 +28,6 @@ class CoreGPU{
 
 		int loadCoreKernel();
 		int setParams(Aom1D& aom1D,Aom2D& aom2D, int i);
-		int16_t* calculate(long tick);
+		int16_t* calculate(long tick,int16_t* buffer);
 };
 #endif

@@ -19,7 +19,7 @@ using namespace std;
 #define DEBUG_SAMPLE_RATE 100'000
 
 #define GPU_calculation
-#define no_card_connected //no card is connected : use only the pc clock to get the current card segment
+//#define no_card_connected //no card is connected : use only the pc clock to get the current card segment
 //#define opti_prevent //just dum calculation to make sure the compiler does'nt generate code that overestimate the performances.
 namespace coreCalc{
 
@@ -37,9 +37,10 @@ long getTimer(chrono::time_point<chrono::system_clock> timer){
 #ifdef test_perf_mode
 long curSeg=0;
 #endif
+
+#ifdef no_card_connected
 int getCurrentCardSegment(){
 	//TODO get the current card Segment
-#ifdef no_card_connected
 #ifndef test_perf_mode
 	return (int)(getTimer(timer)/1'000'000.0*DEBUG_SAMPLE_RATE/(float)SEGMENT_SIZE)%BUFFER_SIZE;
 #else
@@ -47,9 +48,14 @@ int getCurrentCardSegment(){
 	curSeg %= BUFFER_SIZE;
 	return curSeg;
 #endif
-#endif
 	
 }
+#else
+int getCurrentCardSegment(Card& card){
+	card.updateEstimation();
+	return (card.tick/(long)SEGMENT_SIZE)%BUFFER_SIZE;
+}
+#endif
 
 //not used anymore, use mmath::sin which precalculate a discrete set of frequencies
 //or write something that recalculate dynamicaly "new" frequencies that are encounetered
@@ -74,6 +80,9 @@ int getCurrentCardSegment(){
 //}
 
 void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
+#ifndef no_card_connected
+	Card card;
+#endif
 #ifdef GPU_calculation
 	printf("GPU calculation");
 	CoreGPU gpu1;//TODO use a qeue
@@ -128,19 +137,18 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 
 		//thirdly, calculate this segment, if we ar'nt over MAX_TICK
 		if (tickToCompute<currentTick+MAX_TICK){
-<<<<<<< HEAD
+#ifdef no_card_connected
 			int16_t buff[4*SEGMENT_SIZE]{0};
-			calculateSegment(scheduler,aom1D,aom2D,tickToCompute,buff);
-=======
+#else 
+			int16_t* buff = &card.buffer[findSegmentAssociatedToTick(tickToCompute)];
+#endif
+
 #ifdef GPU_calculation
-			int16_t* buff;
-			buff = calculateGPU(scheduler,aom1D,aom2D,tickToCompute,gpu2);
+			buff = calculateGPU(scheduler,aom1D,aom2D,tickToCompute,gpu2,buff);
 			//printf("b %d : gpu outbuffer 0 %d\n",counter,buff[938]);
 #else
-			int16_t buff[4*SEGMENT_SIZE]{0};
 			calculateCPU(scheduler, aom1D, aom2D, tickToCompute, buff);
 #endif
->>>>>>> main
 			scheduler.nextTickToCompute = tickToCompute + SEGMENT_SIZE;
 
 //			for (size_t i=0;i<96000;i++){
@@ -180,11 +188,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 			break;
 		}
 #else
-<<<<<<< HEAD
-		if (getTimer(timer)>10'000'000){
-=======
 		if (getTimer(timer)>10'000'000){//10 seconds
->>>>>>> main
 		//if (currentTick>50'000){
 			startTimer();
 			cout<<"count "<<counter<<endl;
@@ -279,7 +283,7 @@ long findTickAssociatedToSegment(int segment, long lastTick){
 	return (m*BUFFER_SIZE+(long)segment)*SEGMENT_SIZE;
 }
 
-int16_t* calculateGPU(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D,long tickToCompute,CoreGPU& gpu){
+int16_t* calculateGPU(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D,long tickToCompute,CoreGPU& gpu,int16_t* buffer){
 	
 	for(int i=0;i<(SEGMENT_SIZE/BATCH_SIZE);i++){
 		//recompute the scheduler: 
@@ -295,7 +299,7 @@ int16_t* calculateGPU(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D,long tick
 		gpu.setParams(aom1D,aom2D,i);
 	}
 	//calculate the segment
-	return gpu.calculate(tickToCompute);
+	return gpu.calculate(tickToCompute, buffer);
 	
 }
 }
