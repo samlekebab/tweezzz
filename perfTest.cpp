@@ -264,7 +264,7 @@ int main() {
 		{
 			
 			newEstimator = getTimer(timerEstimator);
-			long diff = (newEstimator - estimator) *(SAMPLE_RATE) * ajustement;
+			long diff = (newEstimator - estimator) *(SAMPLE_RATE/1'000'000) * ajustement;
 
 			k++;
 			if (diff > 1024*128) {
