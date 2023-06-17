@@ -119,11 +119,11 @@ Y = []
 for line in f:
     Y.append(int(line))
 ###
-plt.plot(Y[:1000])
+plt.plot(Y[:50000])
 plt.show()
 ###
 Yf = FFTy(Y,len(Y),1)
-Xf = FFTx(len(Y)/600,600)
+Xf = FFTx(len(Y)/400,400)
 plt.plot(Xf,Yf)
 plt.show()
 ###

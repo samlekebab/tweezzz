@@ -147,6 +147,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 			for (int i=0;i<SEGMENT_SIZE;i++){
 				//printf("yyi %d\n",i);
 				buff[i] = toCopy[i];
+				//printf("%d\n",toCopy[i]);
 			}
 #else
 			calculateCPU(scheduler, aom1D, aom2D, tickToCompute, buff);
@@ -294,16 +295,16 @@ int16_t* calculateGPU(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D,long tick
 	for(int i=0;i<(SEGMENT_SIZE/BATCH_SIZE);i++){
 		//recompute the scheduler: 
 		scheduler.computeSample(tickToCompute + i*BATCH_SIZE);
+		//send it to the gpu
 		//compute the accumulated phase during a batch
+		gpu.setParams(aom1D,aom2D,i);
 		for(int j=0;j<100;j++){//TODO hard codded tweezer number
 			float& pr = aom1D.tweezers[j]->pr ;
 			float& w = aom1D.tweezers[j]->w ;
 			float& a = aom1D.tweezers[j]->A ;
-			pr += fmod(w * (2*3.14159*BATCH_SIZE/SAMPLE_RATE)  , 2*3.14159);
-			//printf("pr%d : %f\n",j,a);
+			pr += fmod(w * (2*3.14159265358979323846*(BATCH_SIZE)/(double)SAMPLE_RATE)  , 2*3.14159265358979323846);
+		//printf("pr%d : %f\n",j,pr);
 		}
-		//send it to the gpu
-		gpu.setParams(aom1D,aom2D,i);
 	}
 	//printf("WWWWWWWWWWWWWWWW\n");
 	//calculate the segment

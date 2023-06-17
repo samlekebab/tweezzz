@@ -5,7 +5,11 @@
 #include "scheduler.h"
 #include <chrono>
 #include "coregpu.h"
+#include "setting.h"
+
+#ifndef no_card_connected
 #include "card.h"
+#endif
 
 //TODO update this comment  
 //this is where the magic is : 

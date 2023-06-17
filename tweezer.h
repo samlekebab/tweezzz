@@ -19,7 +19,7 @@ class Tweezer{
 			A=1.0f/tweezerCount;
 			N=1;
 			w=70e6;
-			p=1;
+			p=0.0;
 			pr=0;
 
 

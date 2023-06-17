@@ -20,7 +20,6 @@ class CoreGPU{
 		cl_mem cl_outBuffer;
 		cl_mem cl_aomBuffer;//TODO same for the aom2D
 		int16_t outBuffer[2*workSize];
-
 		cl_mem cl_sinBuffer;//represent the sin lut buffer in the video memory
 		float sinBuffer[workSize];
 		

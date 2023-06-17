@@ -29,7 +29,7 @@ int CoreGPU::initCl(const char *programPath,const char *kernelName, cl_kernel& k
 	}
 	cl_device_id device_id[3];
 	cl_uint numDevices;
-	int plt = 1;
+	int plt = 0;
 	cl_err = clGetDeviceIDs(plt_id[plt],CL_DEVICE_TYPE_GPU,3,device_id,&numDevices);
 
 	if (cl_err == CL_SUCCESS)
