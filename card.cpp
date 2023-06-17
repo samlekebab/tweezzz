@@ -88,9 +88,10 @@ void Card::initTransfert(){
 
 		//inspired by example of the manual
 		//creating the buffer
+		printf("hardware buffer max is %ld bytes\n",bufsizeInSamples*2);
 		buffer = (int16*)malloc(bufsizeInSamples * sizeof(int16)); 
 		for (int i=0;i<bufsizeInSamples;i++){
-			buffer[i]=-30000;//initialize buffer
+			buffer[i]=-30000;//initialize buffer//DEBUG non zero to see the diff
 		}
 
 		spcm_dwDefTransfer_i64(hDrv, SPCM_BUF_DATA, SPCM_DIR_PCTOCARD, 8*1024,
@@ -127,7 +128,7 @@ void Card::updateEstimation(){
 
 	tick = oldTick + diff/2;
 	k++;
-	if (diff > 1024*128) {
+	if (diff > 1024) {
 		estimator = newEstimator;
 		localMax = localMax < diff ? diff : localMax;
 		spcm_dwSetParam_i64(hDrv, SPC_DATA_AVAIL_CARD_LEN, diff);//is this slow ? 

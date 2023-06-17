@@ -143,10 +143,12 @@ int initAndStart(){
 	Aom1D aom1D; aom1D.A = 0.5;
 
 	for (int i=0;i<100;i++){
-		aom1D.tweezers[i]->A = 0.005;
+		aom1D.tweezers[i]->A = 1/100.0;
 		aom1D.tweezers[i]->w += (i-50)*0.15e6;
 	}
-	//aom1D.tweezers[40]->A = 0.1;
+	for (int i=100;i<100;i++){
+		aom1D.tweezers[i]->A = 0.0;
+	}
 	Aom2D aom2D;
 	printf("tw0->A %f\n",aom1D.table);
 	thread coreThread(coreCalc::startCore,ref(scheduler),ref(aom1D),ref(aom2D));
