@@ -75,17 +75,19 @@ int getCurrentCardSegment(Card& card){
 void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 #ifndef no_card_connected
 	Card card;
+#else
+	int16_t* g_buffer = new int16_t[SEGMENT_SIZE * BUFFER_SIZE];
 #endif
+
 #ifdef GPU_calculation
 	printf("GPU calculation");
-	CoreGPU gpu1;//TODO use a qeue
+	//CoreGPU gpu1;//TODO use a qeue
 	CoreGPU gpu2;
 #else
 	printf("CPU calculation");
 #endif
 
 	//DEBUG
-	cout<<"a "<<getTimer(timer)<<endl;
 	long currentTick{0};//estimated current tick played on the card
 	int currentSegment{0};//current segment played on the card
 	long sum=0;
@@ -97,6 +99,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 #endif
 	
 	//preparing the luts for "all" frequencies
+	//TODO is it used anymore ? 
 	mmath::fillUpTable();
 
 
@@ -108,7 +111,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 #endif
 
 	while(1){
-		//first, synchronize with the card to know where we are
+		//first, synchronize with card to know when we are
 #ifdef no_card_connected
 		currentSegment = getCurrentCardSegment();
 #else
@@ -118,48 +121,52 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 		//cout<<"current segment "<<currentSegment<<endl;
 		//cout<<"currentTick "<<currentTick<<endl;
 		
-		//secondly, ask the sheduler what tick should be calculated next, convert it into a segment, check with SAFE_SEGMENT to deduce the segment to calculate
+		//secondly, ask the scheduler what tick should be calculated next check with SAFE_SEGMENT to deduce the segment to calculate, convert it into a segment number
 
 		//lock the scheduler
-		//TODO release the scheduler before starting the calculation on the GPU(or CPU)
+		//TODO release the scheduler lock before starting the calculation on the GPU(or CPU)
 		const lock_guard<mutex> scheduler_lock(scheduler.usingScheduler_mutex);
 		long tickToCompute = scheduler.nextTickToCompute;
-		tickToCompute = max(currentTick+SAFE_TICK,tickToCompute);
+		tickToCompute = max(currentTick+(long)SAFE_TICK,tickToCompute);
 		if (tickToCompute == currentTick + SAFE_TICK){
-			printf("dropping at tick %d\n",tickToCompute);
+			//printf("dropping at tick %d\n",tickToCompute);
 			drop++;
 		}
-		tickToCompute = (int)(tickToCompute/SEGMENT_SIZE)*SEGMENT_SIZE;//put back at the begging of a segment
+		tickToCompute = (tickToCompute/SEGMENT_SIZE)*SEGMENT_SIZE;//put back at the begging of a segment
+		int segmentToFill = findSegmentAssociatedToTick(tickToCompute);
 		
 		//cout<<"tickToCompute "<<tickToCompute<<endl;
 
 		//thirdly, calculate this segment, if we ar'nt over MAX_TICK
-		if (tickToCompute<currentTick+MAX_TICK){
+		//and put in the buffer to send to the card
+		if (tickToCompute<currentTick+MAX_TICK){//TODO add a "next branch tick" condition that ask the sheduler when the next branch might happend, because no need to compute further that that because there will be a rewind anyway
+			int tickOfBuffer = segmentToFill * SEGMENT_SIZE;
 #ifdef no_card_connected
-			int16_t buff[SEGMENT_SIZE]{0};
+			int16_t* buff = &g_buffer[tickOfBuffer];
 #else 
-			int tickOfBuffer = findSegmentAssociatedToTick(tickToCompute)*SEGMENT_SIZE;
 			int16_t* buff = &card.buffer[tickOfBuffer];
 #endif
 
 #ifdef GPU_calculation
 			int16_t* toCopy = calculateGPU(scheduler,aom1D,aom2D,tickToCompute,gpu2,gpu2.outBuffer);
 			for (int i=0;i<SEGMENT_SIZE;i++){
-				//printf("yyi %d\n",i);
-				buff[i] = toCopy[i];
-				//printf("%d\n",toCopy[i]);
+				buff[i] = aom1D.A * aom1D.N * toCopy[i];
 			}
+
 #else
 			calculateCPU(scheduler, aom1D, aom2D, tickToCompute, buff);
 #endif
+
+			//notify the scheduler that we computed this tick
 			scheduler.nextTickToCompute = tickToCompute + SEGMENT_SIZE;
+			//TODO add another rollback check -> print any negative result (and abbort ?)
 
 //			for (size_t i=0;i<96000;i++){
 //				printf("res %d : %d\n",i,gpu.outBuffer[i]);
 //			}
 		
 
-			//finaly, push the result in the card
+			//depending on wich setting we are, we save data, count MS/s, stop the loop etc..
 			//TODO
 #ifdef 	file_output
 			for (int i{0};i<SEGMENT_SIZE;i++){
@@ -182,7 +189,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 #endif
 
 		}else{
-			printf("max tick reached\n");
+			//printf("max tick reached\n");
 		}
 #ifdef no_card_connected
 #ifndef test_perf_mode
@@ -193,7 +200,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 			break;
 		}
 #else
-		if (getTimer(timer)>10'000'000){//10 seconds
+		if (getTimer(timer)>TEST_PERF_TIME){//10 seconds
 		//if (currentTick>50'000){
 			startTimer();
 			cout<<"count "<<counter<<endl;
@@ -263,6 +270,7 @@ void calculate_tweezer(Aom1D& aom1D, Aom2D& aom2D,int tweezer, long initial_tick
 	}
 
 }
+
 /*not used anymore. replaced by calculate_tweezer
 void calculate_tick(const Aom1D aom1D,const Aom2D aom2D,const long tick, int16_t& buff){
 	//TODO the aom2D
@@ -277,6 +285,7 @@ void calculate_tick(const Aom1D aom1D,const Aom2D aom2D,const long tick, int16_t
 	buff = MAX_VALUE * sumAom1D/aom1D.tweezerCount * aom1D.A * aom1D.N / aom1D.tweezerCount;
 	
 }*/
+
 inline int findSegmentAssociatedToTick(long tick){
 	return (long)(tick/SEGMENT_SIZE) % BUFFER_SIZE;
 }
@@ -306,7 +315,6 @@ int16_t* calculateGPU(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D,long tick
 		//printf("pr%d : %f\n",j,pr);
 		}
 	}
-	//printf("WWWWWWWWWWWWWWWW\n");
 	//calculate the segment
 	return gpu.calculate(tickToCompute, buffer);
 	

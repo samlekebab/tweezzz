@@ -18,6 +18,7 @@ void compute(float phase,__global short* output,__global float* GaomTable, __glo
 	__local float localAomTablePR[100];
 
 	barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);//I don't understand why the barrier impove the performance
+	//TODO get rid of the __global ( and the global fence ) I think hurt perf or even lead to undefined behavior ? 
 	__global float* aomTable = &GaomTable[batch_number*nbOfParam*tweezerCount];//if there is no barrier, this line is reducing a lot the performances.
 
 	for (int i=0;i<tweezerCount ;i++){

@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <chrono>
 #include <cmath>
@@ -14,12 +13,11 @@
 #include "lib/dlltyp.h"
 #include "lib/spcm_drv.h"
 #include <thread>
-
 #include <time.h>
-
 //#include <profileapi.h>
 #include "mmath.h"
 #include <cmath>
+
 using namespace std;
 class Rampup:public FormGenerator{
 	
