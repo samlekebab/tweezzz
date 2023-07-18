@@ -2,12 +2,12 @@
 #define SCHEDULER
 //#include "formGenerator.h"
 class FormGenerator;
+class TimeEvent;
 #include <mutex>
 #include <algorithm>
 #include "tas.h"
 #include <list>
 #include <fstream>
-#include "timeEvent.h"
 //this class will callback every active function generator (active meaning in the range of ticks that the function generator asks 
 //it uses a heap to register function generators and a list to go throught active function generators
 class Scheduler{

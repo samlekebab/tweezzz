@@ -50,28 +50,6 @@ int getCurrentCardSegment(Card& card){
 }
 #endif
 
-//not used anymore, use mmath::sin which precalculate a discrete set of frequencies
-//or write something that recalculate dynamicaly "new" frequencies that are encounetered
-//this simpler solution of lut values of the sinus does is not as fast in cpu mode (because it prevent auto-vectorizatation ?)
-//float sinLut_t[10'000]{0};
-//float sinLut_t2[10'000]{0};
-//bool sinLut_tb[10'000]{false};
-//int c=0;
-//double sinLut(double v){
-//	double id = v/3.141592653589793238462643383279/2
-//-long(v/(2*3.141592653589793238462643383279));
-//	int i_id = int(id*10'000);
-//	//cout<<"id :"<<id<<" "<<v/3.141592653589793238462643383279/2<<endl;
-//	//cout<<long(v/(2*3.141592653589793238462643383279))<<endl;
-//	//cout<<i_id<<" "<<sinLut_tb[i_id]<<endl;
-//	if (!sinLut_tb[i_id]){
-//		//cout<<++c<<endl;
-//		sinLut_t[i_id]=sin(v);
-//		sinLut_tb[i_id] = true;
-//	}	
-//	return sinLut_t[i_id];
-//}
-
 void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 #ifndef no_card_connected
 	Card card;
@@ -90,7 +68,6 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 	//DEBUG
 	long currentTick{0};//estimated current tick played on the card
 	int currentSegment{0};//current segment played on the card
-	long sum=0;
 	long drop=0;
 	long counter=0;
 
@@ -111,7 +88,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 #endif
 
 	while(1){
-		//first, synchronize with card to know when we are
+		//first, synchronize with card to know when we are, call time related events
 #ifdef no_card_connected
 		currentSegment = getCurrentCardSegment();
 #else
@@ -121,12 +98,16 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 		//cout<<"current segment "<<currentSegment<<endl;
 		//cout<<"currentTick "<<currentTick<<endl;
 		
+		//update the Time related events 
+		scheduler.callTimeEvent(currentTick);
+		
 		//secondly, ask the scheduler what tick should be calculated next check with SAFE_SEGMENT to deduce the segment to calculate, convert it into a segment number
-
 		//lock the scheduler
 		//TODO release the scheduler lock before starting the calculation on the GPU(or CPU)
 		const lock_guard<mutex> scheduler_lock(scheduler.usingScheduler_mutex);
 		long tickToCompute = scheduler.nextTickToCompute;
+
+		//in case we drop behind TODO code an "emergency" stop (or beter notification system ?) if the drop happen at critical time (when we manipulate atomes
 		tickToCompute = max(currentTick+(long)SAFE_TICK,tickToCompute);
 		if (tickToCompute == currentTick + SAFE_TICK){
 			//printf("dropping at tick %d\n",tickToCompute);

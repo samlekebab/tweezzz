@@ -12,9 +12,15 @@ Bounds FormGenerator::connect(long tick,float& target){
 	this->bounds.start = tick;
 	this->bounds.end = tick+this->getDuration();
 
-	scheduler->addFormGenerator(this);
+	//scheduler->addFormGenerator(this);
+	schedulerAdd();
 	return this->bounds;
 }
+
+void FormGenerator::schedulerAdd(){
+	scheduler->addFormGenerator(this);
+}
+
 Bounds FormGenerator::connect(float& target){
 	return this->connectRelative(0,target);
 }

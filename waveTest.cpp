@@ -2,6 +2,7 @@
 #include "aom2D.h"
 #include "core.h"
 #include "formGenerator.h"
+#include "timeEvent.h"
 #include "lib/dlltyp.h"
 #include "lib/regs.h"
 #include "lib/spcerr.h"
@@ -16,6 +17,8 @@
 #include <thread>
 #include <thread>
 #include <time.h>
+#include "asyncInput.h"
+#include "waitTimeEvent.h"
 
 using namespace std;
 class Rampup:public FormGenerator{
@@ -47,10 +50,28 @@ class Rampup:public FormGenerator{
 		void setBeginningValue(float value){}
 };
 
+class MesurementTimeEvent:public TimeEvent{
+	public: 
+		struct Setting{
+			AsyncInput& input;
+		};
+		Setting setting;
+		MesurementTimeEvent(Setting setting):setting(setting){
+			setTag("MesurementTimeEvent");
+		}
+		float calc(long tick){
+			//TODO mesure async input X0,1,2
+			//TODO put the result in setting.input.X0,1,2
+			return 0;
+		}
+};
 void sequence(Aom1D& aom1D, Aom2D& aom2D){
 	//cout<<"begining of the sequence"<<endl;
+	AsyncInput input;
 	aom1D.A = 0.25;
 	(new Rampup({.test = 0, .duration = 1'000'000}))->connect(aom1D.A);
+	(new MesurementTimeEvent({.input = input}))->connectRelative(-500'000,input.X0);
+	(new WaitTimeEvent())->connectAndWait();
 	(new Rampup({.test = 0, .duration = 1'000'000}))->connect(aom1D.A);
 }
 int initAndStart(){
@@ -67,7 +88,7 @@ int initAndStart(){
 		aom1D.tweezers[i]->A = 0.0;
 	}
 	Aom2D aom2D;
-	printf("tw0->A %f\n",aom1D.table);
+	printf("tw0->A %f\n",*aom1D.table);
 
 	//start the core
 	thread coreThread(coreCalc::startCore,ref(scheduler),ref(aom1D),ref(aom2D));

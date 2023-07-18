@@ -4,12 +4,20 @@
 #include "tas.h"
 #include <cmath>
 #include "setting.h"
+#include "timeEvent.h"
+
 using namespace std;
 void Scheduler::addFormGenerator(FormGenerator* f){
 	lock_guard<mutex> scheduler_lock(this->usingScheduler_mutex);
-	cout<<"adding a generator"<<endl;
+
+#ifdef sch_log
+	logFile<<"adding a generator"<<endl;
+#endif
 	if (f->bounds.start < nextTickToCompute){//rewind procedure
-		cout<<"put it in the list"<<endl;
+
+#ifdef sch_log
+		logFile<<"put it in the list"<<endl;
+#endif
 		putInList(f);
 		nextTickToCompute = f->bounds.start;
 		
@@ -20,14 +28,26 @@ void Scheduler::addFormGenerator(FormGenerator* f){
 		//TODO
 
 	}else{
-		cout<<"put it in the heap : "<<endl;
+#ifdef sch_log
+		logFile<<"put it in the heap : "<<endl;
+#endif
 		tas.push(f);
 		tas.print();
 	}
 	EOFT = max(EOFT,f->bounds.end);
 
 }
+void Scheduler::addTimeEvent(TimeEvent* t){
 
+	lock_guard<mutex> scheduler_lock(this->usingScheduler_mutex);
+
+#ifdef sch_log
+	logFile<<"adding TimeEvent"<<endl;
+#endif
+	timeEventHeap.push(t);
+	timeEventHeap.print();
+
+}
 //TODO a logger of what the sheduler is dooing
 long Scheduler::computeSample(long tick){
 	//lock_guard<mutex> scheduler_lock(this->usingScheduler_mutex);
@@ -68,7 +88,9 @@ long Scheduler::computeSample(long tick){
 		logFile<<" ; ";
 #endif
 		if ((*it)->bounds.end < tick){
-			cout<<"removing a generator at"<<tick<<endl;
+#ifdef sch_log
+			logFile<<"removing a generator at"<<tick<<endl;
+#endif
 			delete *it;//BUG TODO see above 
 			auto tmp = it;
 			++it;
@@ -92,3 +114,19 @@ void Scheduler::putInList(FormGenerator* f){
 }
 
 
+void Scheduler::callTimeEvent(long tick){
+
+	//call each event
+	//printf("%ld, %ld\n",tick,((TimeEvent*)timeEventHeap.view())->bounds.start);
+	while(timeEventHeap.getN()>0 && ((TimeEvent*)timeEventHeap.view())->bounds.start<=tick){
+		auto v = (TimeEvent*)timeEventHeap.pop();
+		v->calc(tick - v->bounds.start);//call event, pass elapsed since due time
+
+		//
+#ifdef sch_log
+		logFile<<"event on tick "<<tick<<endl;
+		logFile.flush();
+#endif
+	}
+
+}
