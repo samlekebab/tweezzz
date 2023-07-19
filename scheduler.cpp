@@ -16,7 +16,7 @@ void Scheduler::addFormGenerator(FormGenerator* f){
 	if (f->bounds.start < nextTickToCompute){//rewind procedure
 
 #ifdef sch_log
-		logFile<<"put it in the list"<<endl;
+		logFile<<"put it in the list, rewind to "<<f->bounds.start<<endl;
 #endif
 		putInList(f);
 		nextTickToCompute = f->bounds.start;
@@ -48,7 +48,6 @@ void Scheduler::addTimeEvent(TimeEvent* t){
 	timeEventHeap.print();
 
 }
-//TODO a logger of what the sheduler is dooing
 long Scheduler::computeSample(long tick){
 	//lock_guard<mutex> scheduler_lock(this->usingScheduler_mutex);
 	//first, we pop the heap

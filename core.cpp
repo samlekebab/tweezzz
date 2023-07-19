@@ -112,11 +112,15 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 		if (tickToCompute == currentTick + SAFE_TICK){
 			//printf("dropping at tick %d\n",tickToCompute);
 			drop++;
+			//put at the begining of the next segment
+			tickToCompute = ((tickToCompute-1)/SEGMENT_SIZE + 1)*SEGMENT_SIZE;
+
+		}else{
+			//put back at the begging of a segment
+			tickToCompute = (tickToCompute/SEGMENT_SIZE)*SEGMENT_SIZE;
 		}
-		tickToCompute = (tickToCompute/SEGMENT_SIZE)*SEGMENT_SIZE;//put back at the begging of a segment
 		int segmentToFill = findSegmentAssociatedToTick(tickToCompute);
 		
-		//cout<<"tickToCompute "<<tickToCompute<<endl;
 
 		//thirdly, calculate this segment, if we ar'nt over MAX_TICK
 		//and put in the buffer to send to the card

@@ -7,7 +7,7 @@
 #define SEGMENT_SIZE (19*1024*10) //number of sample per segment
 #define BATCH_SIZE (1024*10)//too big? //number of sample where parameters stay constant
 #define BUFFER_SIZE (1000)  //number of segment in a cyclic buffer
-#define SAFE_TICK 0//DEBUG (3125*960)     //min delay (in ticks) between the start of the computation and the push to the card (directly related to the delay)
+#define SAFE_TICK (10*1024*10)//(3125*960)     //min delay (in ticks) between the start of the computation and the push to the card (directly related to the delay)
 #define MAX_TICK ((long)19*1024*10*10) //how far we calculate in advance segments (should'nt influence the delay)
 #define MAX_VALUE 32767 	//max value of 16bit signed integer
 
