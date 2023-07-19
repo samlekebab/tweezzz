@@ -118,8 +118,31 @@ long Card::getTimer(timespec timer){
 void Card::start(){
 	spcm_dwSetParam_i32(hDrv, SPC_M2CMD, M2CMD_CARD_START | M2CMD_CARD_FORCETRIGGER);
 	timerEstimator = startTimer(); 
-}
 
+	//asyncrhone clock synchronisation
+}
+void Card::syncClockAsync(){
+	while(1) syncClock();
+}
+void Card::syncClock(){
+	//syncronyse the estimator
+	spcm_dwGetParam_i64(hDrv, SPC_DATA_AVAIL_USER_LEN, &availBytes);//is this slow ?
+	long delta = availBytes - bufsizeInSamples;
+
+	float ratio = availBytes / (float)bufsizeInSamples;
+	ajustement = ajustementMax + (ratio-2)*ajustementSlope;
+
+	localMax = 0;
+	timerEstimator = startTimer();
+	newEstimator = estimator = 0;
+	//estimator += ajustement;
+	//printf("counters : %d,%d, %f\n", c, k,c/(float)k);
+
+	if (k % (controleRate * printRate) == 0) {
+			printf("disponible : %d (%f)->%f,\ndeltas %d\n localMax %d,%d\n", availBytes / 1000, ratio, ajustement, delta, localMax,c);
+		}
+
+}
 //TODO try put the card adjustement part on thread to see if it changes something
 void Card::updateEstimation(){
 
@@ -136,27 +159,18 @@ void Card::updateEstimation(){
 		oldTick = tick;
 	}
 
+	//version where clock synchronisation is synchrone
+	
 	if (k % controleRate == 0) {
-		//syncronyse the estimator
-		spcm_dwGetParam_i64(hDrv, SPC_DATA_AVAIL_USER_LEN, &availBytes);//is this slow ?
-		long delta = availBytes - bufsizeInSamples;
-
-		float ratio = availBytes / (float)bufsizeInSamples;
-		ajustement = ajustementMax + (ratio-2)*ajustementSlope;
-
-		if (ratio > securityThreshold) {
+		syncClock();
+		
+		//TODO rewrite this adjustement
+		/*if (ratio > securityThreshold) {
 			spcm_dwSetParam_i64(hDrv, SPC_DATA_AVAIL_CARD_LEN, std::max(0.0, (ratio - securityThreshold+0.01)* bufsizeInSamples));
 			//printf("underun security triggerd\n");
-		}
+		}*/
 
-		if (k % (controleRate * printRate) == 0) {
-			printf("disponible : %d (%f)->%f,\ndeltas (%d)%d\n localMax %d,%d\n", availBytes / 1000, ratio, ajustement, delta, diff, localMax,c);
-		}
-		localMax = 0;
-		timerEstimator = startTimer();
-		newEstimator = estimator = 0;
-		//estimator += ajustement;
-		//printf("counters : %d,%d, %f\n", c, k,c/(float)k);
+
 
 	}
 	

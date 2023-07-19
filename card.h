@@ -23,7 +23,7 @@ class Card{//TODO make this class closer to the equivalent class from the python
 		long bufsizeInSamples = BUFFER_SIZE * (long)SEGMENT_SIZE;
 		int16_t* buffer;//where we are putting the data to send to the card
 
-	//only a few second before loosing the signal
+	//works only for a few second before loosing the signal
 		/*
 		double ajustementMax = 2.031; 
 		double ajustementSlope = 0.003;
@@ -63,6 +63,8 @@ class Card{//TODO make this class closer to the equivalent class from the python
 
 		int initCard();
 		void initTransfert();
+		void syncClockAsync();
+		void syncClock();
 
 
 };
