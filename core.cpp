@@ -86,7 +86,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 #else
 	card.start();
 #endif
-
+	int debug=0;
 	while(1){
 		//first, synchronize with card to know when we are, call time related events
 #ifdef no_card_connected
@@ -110,7 +110,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 		//in case we drop behind TODO code an "emergency" stop (or beter notification system ?) if the drop happen at critical time (when we manipulate atomes
 		tickToCompute = max(currentTick+(long)SAFE_TICK,tickToCompute);
 		if (tickToCompute == currentTick + SAFE_TICK){
-			//printf("dropping at tick %d\n",tickToCompute);
+			printf("dropping at tick %d\n",tickToCompute);
 			drop++;
 			//put at the begining of the next segment
 			tickToCompute = ((tickToCompute-1)/SEGMENT_SIZE + 1)*SEGMENT_SIZE;
@@ -136,7 +136,12 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 			int16_t* toCopy = calculateGPU(scheduler,aom1D,aom2D,tickToCompute,gpu2,gpu2.outBuffer);
 			for (int i=0;i<SEGMENT_SIZE;i++){
 				buff[i] = aom1D.A * aom1D.N * toCopy[i];
+				buff[i] = aom1D.A * (int16_t)(debug*500);
+				if (tickOfBuffer/SEGMENT_SIZE == 0){
+					buff[i] = 0;
+				}
 			}
+			debug++;
 
 #else
 			calculateCPU(scheduler, aom1D, aom2D, tickToCompute, buff);

@@ -26,28 +26,29 @@ class Rampup:public FormGenerator{
 
 	public:
 		struct Setting{
-			int test;
-			double duration;
+			long duration;
+			float finalValue=1.0;
 		};
 		Setting setting;
-		double initial;
+		float initial;
 		Rampup(Setting setting):setting(setting){
 			setTag("rampup");
 		}
-		//return the sample duration of the effect
+		//returns the duration in sample of the FormGenerator
 		long getDuration(){
 			return setting.duration;
 		}
 
 		//take a sampletime with the beginning as origin and return a value between 0 and 1
 		float calc(long time){
-			*target = (double)time*1.0/setting.duration;
+			*target = initial + (float)time/setting.duration * (setting.finalValue - initial);
+			//printf("%f\n",*target);
 			return *target;
 		
 		}
 
 		//if we want to take the value at the beginning to adapte our calculation
-		void setBeginningValue(float value){}
+		void setBeginningValue(float value){initial = value;}
 };
 
 class MesurementTimeEvent:public TimeEvent{
@@ -61,18 +62,30 @@ class MesurementTimeEvent:public TimeEvent{
 		}
 		float calc(long tick){
 			//TODO mesure async input X0,1,2
+			//DEBUG (?)
+			int input = Card::card->readInput();
+			printf("input read : %d\n",input);
 			//TODO put the result in setting.input.X0,1,2
+			setting.input.X0 = input & 0b001; 
+			setting.input.X1 = input & 0b010; 
+			setting.input.X2 = input & 0b100; 
 			return 0;
 		}
 };
 void sequence(Aom1D& aom1D, Aom2D& aom2D){
 	//cout<<"begining of the sequence"<<endl;
 	AsyncInput input;
+	float bidon;
 	aom1D.A = 0.25;
-	(new Rampup({.test = 0, .duration = 1'000'000}))->connect(aom1D.A);
-	(new MesurementTimeEvent({.input = input}))->connectRelative(-500'000,input.X0);
-	(new WaitTimeEvent())->connectAndWait();
-	(new Rampup({.test = 0, .duration = 1'000'000}))->connect(aom1D.A);
+	for (int i=0;i<10000;i++){
+		if (input.X0){
+			(new Rampup({ .duration = 1'000'0,.finalValue = 1}))->connect(aom1D.A);
+		}else{
+			(new Rampup({ .duration = 1'000'0,.finalValue = 0}))->connect(aom1D.A);
+		}
+		(new MesurementTimeEvent({.input = input}))->connectRelative(-500'000,bidon);
+		(new WaitTimeEvent())->connectAndWait();
+	}
 }
 int initAndStart(){
 	//initialisation
@@ -97,8 +110,9 @@ int initAndStart(){
 	thread sequence_thread(sequence, std::ref(aom1D), std::ref(aom2D));
 	
 	//end
-	coreThread.join();
 	sequence_thread.join();
+	cout<<"end of the sequence"<<endl;
+	coreThread.join();
 
 	cout<<"end of the program"<<endl;//this never happens
 	return 0;

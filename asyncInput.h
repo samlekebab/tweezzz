@@ -1,8 +1,8 @@
 #ifndef ASYNC_INPUT
 #define ASYNC_INPUT
 struct AsyncInput{
-	float X0;
-	float X1;
-	float X2;
+	bool X0 = false;
+	bool X1= false;
+	bool X2=false;
 };
 #endif

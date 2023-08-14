@@ -46,6 +46,9 @@ class Card{//TODO make this class closer to the equivalent class from the python
 		timespec timerEstimator;
 		void updateEstimation();
 
+		static Card* card;
+		static int readInput();
+
 		long tick = 0;
 	private:
 

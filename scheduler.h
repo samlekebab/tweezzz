@@ -8,7 +8,7 @@ class TimeEvent;
 #include "tas.h"
 #include <list>
 #include <fstream>
-//this class will callback every active function generator (active meaning in the range of ticks that the function generator asks 
+//this class will callback every active function generator (active meaning in the range of ticks that the function generator asked
 //it uses a heap to register function generators and a list to go throught active function generators
 class Scheduler{
 //TODO mutex the heap

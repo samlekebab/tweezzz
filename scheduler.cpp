@@ -53,6 +53,7 @@ long Scheduler::computeSample(long tick){
 	//first, we pop the heap
 	while(tas.getN()>0){
 		long start = ((FormGenerator*)tas.view())->bounds.start;
+		
 		if (start>tick)
 			break;
 

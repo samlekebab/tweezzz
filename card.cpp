@@ -1,7 +1,9 @@
 #include "card.h"
 #include <iostream>
 #include <cmath>
-Card::Card(){
+Card* Card::card = nullptr;
+Card::Card() {
+	Card::card = this;
 	initCard();
 	initTransfert();
 }
@@ -62,6 +64,10 @@ int Card::initCard(){
 	//freq filters
 	//spcm_dwSetParam_i32(hDrv, SPC_FILTER0, 0);
 
+	//I/O
+	//input
+	spcm_dwSetParam_i32 (hDrv, SPCM_X0_MODE, SPCM_XMODE_ASYNCIN);
+	spcm_dwSetParam_i32 (hDrv, SPCM_XX_ASYNCIO, 0);
 
 	//enable FIFO
 	spcm_dwSetParam_i32(hDrv, SPC_CARDMODE, SPC_REP_FIFO_SINGLE);
@@ -91,7 +97,7 @@ void Card::initTransfert(){
 		printf("hardware buffer max is %ld bytes\n",bufsizeInSamples*2);
 		buffer = (int16*)malloc(bufsizeInSamples * sizeof(int16)); 
 		for (int i=0;i<bufsizeInSamples;i++){
-			buffer[i]=-30000;//initialize buffer//DEBUG non zero to see the diff
+			buffer[i]=+30000;//initialize buffer//DEBUG non zero to see the diff
 		}
 
 		spcm_dwDefTransfer_i64(hDrv, SPCM_BUF_DATA, SPCM_DIR_PCTOCARD, 8*1024,
@@ -187,4 +193,11 @@ void Card::updateEstimation(){
 		spcm_vClose(hDrv); // close the driver
 		exit(0); // and leave the program
 	}
+
 }
+int Card::readInput(){
+	int value = 0;
+	spcm_dwGetParam_i32 (card->hDrv, SPCM_XX_ASYNCIO, &value);
+	return value;
+}
+

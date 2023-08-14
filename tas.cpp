@@ -2,8 +2,8 @@
 #include <iostream>
 using namespace std;
 bool Tas::comparer(Node* a, Node* b) {
-	int w1 = a->bounds.start;
-	int w2 = b->bounds.start;
+	long w1 = a->bounds.start;
+	long w2 = b->bounds.start;
 	return w2 < w1;
 }
 void Tas::echange(int i, int j) {
