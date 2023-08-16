@@ -17,6 +17,7 @@
 #include <thread>
 #include <thread>
 #include <time.h>
+#include "card.h"
 #include "asyncInput.h"
 #include "waitTimeEvent.h"
 
@@ -87,11 +88,22 @@ void sequence(Aom1D& aom1D, Aom2D& aom2D){
 		(new WaitTimeEvent())->connectAndWait();
 	}
 }
+void sequenceTestRewind(Aom1D& aom1D, Aom2D& aom2D){
+	AsyncInput input;
+	float bidon;
+	aom1D.A = 0.25;
+
+	(new Rampup({.duration = 1'000'000,.finalValue=1}))->connect(aom1D.A);
+	(new MesurementTimeEvent({.input = input}))->connectRelative(-500'000,bidon);
+	(new WaitTimeEvent())->connectRelativeAndWait(-400'000);
+	(new Rampup({ .duration = 1'000'000,.finalValue = 0.5}))->connectRelative(-400'000,aom1D.A);
+}
 int initAndStart(){
 	//initialisation
-	Scheduler scheduler;
-	FormGenerator::scheduler = &scheduler;
 	Aom1D aom1D; aom1D.A = 0.5;
+	Scheduler scheduler(aom1D);
+
+	FormGenerator::scheduler = &scheduler;
 
 	for (int i=0;i<100;i++){
 		aom1D.tweezers[i]->A = 1/100.0;
@@ -107,7 +119,7 @@ int initAndStart(){
 	thread coreThread(coreCalc::startCore,ref(scheduler),ref(aom1D),ref(aom2D));
 	
 	//run the sequence
-	thread sequence_thread(sequence, std::ref(aom1D), std::ref(aom2D));
+	thread sequence_thread(sequenceTestRewind, std::ref(aom1D), std::ref(aom2D));
 	
 	//end
 	sequence_thread.join();

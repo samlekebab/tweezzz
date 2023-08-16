@@ -18,18 +18,49 @@ void Scheduler::addFormGenerator(FormGenerator* f){
 #ifdef sch_log
 		logFile<<"put it in the list, rewind to "<<f->bounds.start<<endl;
 #endif
-		putInList(f);
+		putInList(f, nextTickToCompute);
 		nextTickToCompute = f->bounds.start;
 		
-		//I give up rewinding procedure (for now) and do a "wait" command that halt calculation at a given moment
-		//push back to the heap formgenerators that start after f->bounds.start
-		//TODO		
-		//pull finished formgenerators back in the list, or even further, in the heap (automaticaly sorted)
-		//TODO
+		//TODO refactor rename it
+		auto it = aomHistoryIterator ;
+		//find the right timestamp
+		while (++it != aomHistory.rend() && (*it).tick >= nextTickToCompute);
+		--it;
+
+		//push formgenerators that start after nextTickToCompute back to the heap
+		auto it2=activeGenerators.rbegin();
+		while(it2 != activeGenerators.rend() && (*(it2))->bounds.start > nextTickToCompute){
+			tas.push(*it2);
+			it2++;
+			activeGenerators.pop_back();
+		}
+
+		//pull finished formgenerators back in the active list(carefull for the sorting), or even further, in the heap (automaticaly sorted)
+		Tas tmpSort;
+		auto it3 = oldGenerators.begin();
+		while(it3 != oldGenerators.end() && (*it3)->bounds.end >= nextTickToCompute){
+			if ((*it3)->bounds.start > nextTickToCompute){
+				tas.push(*it3);
+			}else{
+				tmpSort.push(*it3);
+			}
+			it3++;
+			oldGenerators.pop_front();
+		}
+		while(tmpSort.getN()>0){
+			activeGenerators.push_back((FormGenerator*)tmpSort.pop());
+		}
+
+		//chop head of aomHistoryList
+		aomHistory.erase(aomHistory.begin(),std::next(it).base());
+
+		//put the saved aom table in the current aom
+		aom.copyTable((*it).aom);
+
 
 	}else{
 #ifdef sch_log
-		logFile<<"put it in the heap : "<<endl;
+		logFile<<"put it in the heap"<<endl;
 #endif
 		tas.push(f);
 		tas.print();
@@ -65,13 +96,15 @@ long Scheduler::computeSample(long tick){
 			logFile<<f->tag;
 		logFile<<endl;
 #endif
-		putInList(f);
+		putInList(f,tick);
 		f->findAndSetBeginningValue();//to be able to rewind
+		saveAom(tick);
 
 	}
 
 	//then we callback every FormGenerator inside the list. When they are at bounds.end, we remove them from the list and destroy them, when at bounds.start, we set the start value
-	//BUG TODO need to add a list that containse finished elements to put them back in case of rewind !!! (this list will be thankfully sorted wich limits complexitiy, and can be purged when as element bounds.end at the end of the list goes beyond the current play tick
+	//BUG currrently aom history dont save "real" states but "mixed" stated between two time step, does it matter ? 
+	//also, there can be a lot of "duplicate" of the same timestamp
 	auto it = activeGenerators.begin();
 	logFile<<"clc "<<tick<<" : ";
 	while(it != activeGenerators.end()){
@@ -89,11 +122,11 @@ long Scheduler::computeSample(long tick){
 #endif
 		if ((*it)->bounds.end < tick){
 #ifdef sch_log
-			logFile<<"removing a generator at"<<tick<<endl;
+			logFile<<endl<<"removing a generator at"<<tick<<endl;
 #endif
-			delete *it;//BUG TODO see above 
-			auto tmp = it;
-			++it;
+			oldGenerators.push_front(*it);
+			saveAom(tick);
+			auto tmp = it++;
 			activeGenerators.erase(tmp);
 		}else{
 			++it;
@@ -106,13 +139,21 @@ long Scheduler::computeSample(long tick){
 #endif
 	return 0;
 }
-						   
 
-void Scheduler::putInList(FormGenerator* f){
+void Scheduler::putInList(FormGenerator* f,long tick){
 	f->setBeginningValue(*(f->target));
 	activeGenerators.push_back(f);
-}
 
+}
+void Scheduler::saveAom(long tick){
+#ifdef sch_log
+	logFile<<"save aom at tick : "<<tick<<endl;
+#endif
+	//we do a snapshot of the aom state, to retreve it when rewinding
+	//TODO ask another thread to do the copy of the table (?)
+	aomHistory.push_front(*(new AomHistoryPoint(aom,tick)));
+
+}
 
 void Scheduler::callTimeEvent(long tick){
 
@@ -129,4 +170,27 @@ void Scheduler::callTimeEvent(long tick){
 #endif
 	}
 
+	//TODO proper memory freeing of generators
+	//cleanning the old generators list and update aom list iterator
+	while(++aomHistoryIterator != aomHistory.rend() && (*aomHistoryIterator).tick<tick);
+	--aomHistoryIterator;
+	//TODO delete the tail of the aomHystoryList ? 
+
+
+	auto oldGeneratorsIterator = oldGenerators.rbegin();
+	while(oldGeneratorsIterator != oldGenerators.rend() && (*oldGeneratorsIterator)->bounds.end<tick){
+	
+		printf("c/\n");
+		oldGenerators.pop_back();
+		oldGeneratorsIterator = oldGenerators.rbegin();
+		printf("%d/\n",oldGenerators.size());
+	}
+
+	
+}
+
+Scheduler::Scheduler(const Aom& aom):aom(aom),logFile("res/sch.txt") {
+	aomHistory.push_front(*(new AomHistoryPoint(aom,0)));
+	aomHistoryIterator = aomHistory.rbegin();
+	
 }
