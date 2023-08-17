@@ -78,13 +78,14 @@ void sequence(Aom1D& aom1D, Aom2D& aom2D){
 	AsyncInput input;
 	float bidon;
 	aom1D.A = 0.25;
-	for (int i=0;i<10000;i++){
-		if (input.X0){
-			(new Rampup({ .duration = 1'000'0,.finalValue = 1}))->connect(aom1D.A);
+	(new WaitTimeEvent())->connectRelativeAndWait(20'000'000);
+	for (int i=0;i<1000000;i++){
+		if (!input.X0){
+			(new Rampup({ .duration = 1'000'000,.finalValue = 1}))->connect(aom1D.A);
 		}else{
-			(new Rampup({ .duration = 1'000'0,.finalValue = 0}))->connect(aom1D.A);
+			(new Rampup({ .duration = 1'000'000,.finalValue = 0}))->connect(aom1D.A);
 		}
-		(new MesurementTimeEvent({.input = input}))->connectRelative(-500'000,bidon);
+		//(new MesurementTimeEvent({.input = input}))->connectRelative(-500'000,bidon);
 		(new WaitTimeEvent())->connectAndWait();
 	}
 }
@@ -119,7 +120,7 @@ int initAndStart(){
 	thread coreThread(coreCalc::startCore,ref(scheduler),ref(aom1D),ref(aom2D));
 	
 	//run the sequence
-	thread sequence_thread(sequenceTestRewind, std::ref(aom1D), std::ref(aom2D));
+	thread sequence_thread(sequence, std::ref(aom1D), std::ref(aom2D));
 	
 	//end
 	sequence_thread.join();

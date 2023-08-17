@@ -77,6 +77,7 @@ void Scheduler::addTimeEvent(TimeEvent* t){
 #endif
 	timeEventHeap.push(t);
 	timeEventHeap.print();
+	EOFT = max(EOFT,t->bounds.end);
 
 }
 long Scheduler::computeSample(long tick){

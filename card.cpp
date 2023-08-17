@@ -122,6 +122,10 @@ long Card::getTimer(timespec timer){
 }
 
 void Card::start(){
+	//input async
+	//asyncInputThread = std::thread(&Card::asyncReadInput,this);
+	
+	//TODO what about triggered start ?
 	spcm_dwSetParam_i32(hDrv, SPC_M2CMD, M2CMD_CARD_START | M2CMD_CARD_FORCETRIGGER);
 	timerEstimator = startTimer(); 
 
@@ -201,3 +205,12 @@ int Card::readInput(){
 	return value;
 }
 
+void Card::asyncReadInput(){
+	while(1){
+		inputReadout = readInput();
+		++freq;
+		if(freq%10000==0){
+			printf("nb of mesurements : %ld * 1000 \n",freq/1000);
+		}
+	}
+}

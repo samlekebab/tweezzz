@@ -9,6 +9,8 @@
 #include <cstdint>
 #include <time.h>
 #include "setting.h"
+
+#include <thread>
 class Card{//TODO make this class closer to the equivalent class from the python code of pierre-Antoine Bourdel
 	public:
 		Card();
@@ -48,6 +50,10 @@ class Card{//TODO make this class closer to the equivalent class from the python
 
 		static Card* card;
 		static int readInput();
+		int inputReadout=0;
+		long freq;
+		std::thread asyncInputThread;
+		void asyncReadInput();
 
 		long tick = 0;
 	private:
