@@ -1,7 +1,7 @@
 //#ifndef MSETTINGS
 //#define MSETTINGS
 
-#define SAMPLE_RATE (400*1000000)
+#define SAMPLE_RATE (200*1000000)
 
 //card contains 2GSample memory 
 #define SEGMENT_SIZE (19*1024*10) //number of sample per segment
@@ -22,8 +22,8 @@
 #define TEST_PERF_TIME (10*1000000)
 
 #define sch_log //scheduler log every time it is called for updates
-#define GPU_calculation //enable gpu acceleration
-#define no_card_connected //no card is connected : use only the pc clock to get the current card segment
+#define GPU_calculation
+//#define no_card_connected //no card is connected : use only the pc clock to get the current card segment
 //#define opti_prevent //just dum calculation to make sure the compiler does'nt generate code that overestimate the performances.
-#define OCL_PLAT 0 //TODO what is it ? 
+#define OCL_PLAT 1
 //#endif

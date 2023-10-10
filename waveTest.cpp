@@ -81,9 +81,9 @@ void sequence(Aom1D& aom1D, Aom2D& aom2D){
 	(new WaitTimeEvent())->connectRelativeAndWait(20'000'000);
 	for (int i=0;i<1000000;i++){
 		if (!input.X0){
-			(new Rampup({ .duration = 1'000'000,.finalValue = 1}))->connect(aom1D.A);
+			(new Rampup({ .duration = 1'000'000'000,.finalValue = 1}))->connect(aom1D.A);
 		}else{
-			(new Rampup({ .duration = 1'000'000,.finalValue = 0}))->connect(aom1D.A);
+			(new Rampup({ .duration = 1'000'000'000,.finalValue = 0}))->connect(aom1D.A);
 		}
 		//(new MesurementTimeEvent({.input = input}))->connectRelative(-500'000,bidon);
 		(new WaitTimeEvent())->connectAndWait();

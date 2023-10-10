@@ -38,13 +38,13 @@ int Card::initCard(){
 	}
 
 	//channel selection //TODO multichannel mode
-	spcm_dwSetParam_i64(hDrv, SPC_CHENABLE, CHANNEL0);
+	spcm_dwSetParam_i64(hDrv, SPC_CHENABLE, CHANNEL0|CHANNEL1|CHANNEL2|CHANNEL3);
 
 	//output enable
 	spcm_dwSetParam_i32(hDrv, SPC_ENABLEOUT0, 1);
-	//spcm_dwSetParam_i32(hDrv, SPC_ENABLEOUT1, 0);
-	//spcm_dwSetParam_i32(hDrv, SPC_ENABLEOUT2, 0);
-	//spcm_dwSetParam_i32(hDrv, SPC_ENABLEOUT3, 0);
+	spcm_dwSetParam_i32(hDrv, SPC_ENABLEOUT1, 1);
+	spcm_dwSetParam_i32(hDrv, SPC_ENABLEOUT2, 1);
+	spcm_dwSetParam_i32(hDrv, SPC_ENABLEOUT3, 1);
 
 	int lActivatedChannels;
 	int lChCount;
@@ -54,7 +54,10 @@ int Card::initCard(){
 	printf("Number of activated channels with this bitmask: %d\n", lChCount);
 
 	//max amplitude
-	spcm_dwSetParam_i32(hDrv, SPC_AMP0, 2000);
+	spcm_dwSetParam_i32(hDrv, SPC_AMP0, 1000);
+	spcm_dwSetParam_i32(hDrv, SPC_AMP1, 1000);
+	spcm_dwSetParam_i32(hDrv, SPC_AMP2, 1000);
+	spcm_dwSetParam_i32(hDrv, SPC_AMP3, 1000);
 	if (spcm_dwGetErrorInfo_i32(hDrv, NULL, NULL, szErrorText) != ERR_OK) // check for an error
 	{
 		printf(szErrorText); // print the error text
@@ -75,7 +78,7 @@ int Card::initCard(){
 
 	spcm_dwSetParam_i64(hDrv, SPC_LOOPS, 0);//no loops
 
-	spcm_dwSetParam_i64(hDrv, SPC_DATA_OUTBUFSIZE, 2 * 256 * 1024);
+	spcm_dwSetParam_i64(hDrv, SPC_DATA_OUTBUFSIZE,16 * 2 * 256 * 1024);
 	spcm_dwSetParam_i32(hDrv, SPC_M2CMD, M2CMD_CARD_WRITESETUP);
 
 	if (spcm_dwGetErrorInfo_i32(hDrv, NULL, NULL, szErrorText) != ERR_OK) // check for an error
@@ -97,10 +100,10 @@ void Card::initTransfert(){
 		printf("hardware buffer max is %ld bytes\n",bufsizeInSamples*2);
 		buffer = (int16*)malloc(bufsizeInSamples * sizeof(int16)); 
 		for (int i=0;i<bufsizeInSamples;i++){
-			buffer[i]=+30000;//initialize buffer//DEBUG non zero to see the diff
+			buffer[i]=-15000;//initialize buffer//DEBUG non zero to see the diff
 		}
 
-		spcm_dwDefTransfer_i64(hDrv, SPCM_BUF_DATA, SPCM_DIR_PCTOCARD, 8*1024,
+		spcm_dwDefTransfer_i64(hDrv, SPCM_BUF_DATA, SPCM_DIR_PCTOCARD, 4*8*1024,
 			(void*)buffer, 0, 2 * bufsizeInSamples);
 
 		//load the buffer of the card with blank data
@@ -159,12 +162,13 @@ void Card::updateEstimation(){
 	newEstimator = getTimer(timerEstimator);
 	long diff = (newEstimator - estimator) *(SAMPLE_RATE/1'000'000) * ajustement;
 
-	tick = oldTick + diff/2;
+	tick = oldTick + diff/2/4;
 	k++;
 	if (diff > 1024) {
 		estimator = newEstimator;
 		localMax = localMax < diff ? diff : localMax;
-		spcm_dwSetParam_i64(hDrv, SPC_DATA_AVAIL_CARD_LEN, diff);//is this slow ? 
+		spcm_dwSetParam_i64(hDrv, SPC_DATA_AVAIL_CARD_LEN, diff*4);//is this slow ? 
+		//printf("sended %d\n",diff);
 		c++;
 		oldTick = tick;
 	}

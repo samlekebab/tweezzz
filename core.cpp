@@ -125,7 +125,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 		//thirdly, calculate this segment, if we ar'nt over MAX_TICK
 		//and put in the buffer to send to the card
 		if (tickToCompute<currentTick+MAX_TICK){//TODO add a "next branch tick" condition that ask the sheduler when the next branch might happend, because no need to compute further that that because there will be a rewind anyway
-			int tickOfBuffer = segmentToFill * SEGMENT_SIZE;
+			int tickOfBuffer = segmentToFill * SEGMENT_SIZE * 4;
 #ifdef no_card_connected
 			int16_t* buff = &g_buffer[tickOfBuffer];
 #else 
@@ -133,9 +133,9 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 #endif
 
 #ifdef GPU_calculation
-			int16_t* toCopy = calculateGPU(scheduler,aom1D,aom2D,tickToCompute,gpu2,gpu2.outBuffer);
-			for (int i=0;i<SEGMENT_SIZE;i++){
-				buff[i] = aom1D.A * aom1D.N * toCopy[i];
+			//int16_t* toCopy = calculateGPU(scheduler,aom1D,aom2D,tickToCompute,gpu2,gpu2.outBuffer);
+			for (int i=0;i<SEGMENT_SIZE*4;i++){
+				//buff[i] = aom1D.A * aom1D.N * toCopy[i];
 				buff[i] = aom1D.A * (int16_t)(debug*500);
 				if (tickOfBuffer/SEGMENT_SIZE == 0){
 					buff[i] = 0;
