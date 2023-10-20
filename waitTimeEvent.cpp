@@ -20,6 +20,9 @@ void WaitTimeEvent::connectRelativeAndWait(long tick){
 	wait();
 }
 void WaitTimeEvent::wait(){
-	waitingMutex.lock();
-	waitingMutex.unlock();
+	//in record mode, timeEvents are not relevent, and waitTimeEvent needs not lock the sequence
+	if (!recordMode){
+		waitingMutex.lock();
+		waitingMutex.unlock();
+	}
 }

@@ -23,7 +23,13 @@
 
 #define sch_log //scheduler log every time it is called for updates
 #define GPU_calculation
-//#define no_card_connected //no card is connected : use only the pc clock to get the current card segment
+#define no_card_connected //no card is connected : use only the pc clock to get the current card segment
+#define RT_CALCULATION
 //#define opti_prevent //just dum calculation to make sure the compiler does'nt generate code that overestimate the performances.
-#define OCL_PLAT 1
+#define OCL_PLAT 0
 //#endif
+
+//card setting //TODO separate setting files
+#define HW_BUFFER (32*4096*1024)
+#define NOTIF_SIZE (4024*1024)
+

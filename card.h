@@ -11,6 +11,8 @@
 #include "setting.h"
 
 #include <thread>
+#include <mutex>
+#include <barrier>
 class Card{//TODO make this class closer to the equivalent class from the python code of pierre-Antoine Bourdel
 	public:
 		Card();
@@ -66,6 +68,10 @@ class Card{//TODO make this class closer to the equivalent class from the python
 		void asyncReadInput();
 
 		long tick = 0;
+
+		std::mutex recordDispenserMutex;//to wait on the initialisation that the dispenser fill 1/2 of the buffer
+		
+		void recordDispenser(int16_t* record, size_t MaxLength);
 	private:
 
 		char szErrorText[ERRORTEXTLEN];
@@ -75,6 +81,8 @@ class Card{//TODO make this class closer to the equivalent class from the python
 		long localMax = 0;
 		long oldTick = 0;
 		
+ 		float pastDError=0,pastError=0;
+ 		void syncClock2();
 
 		long c = 0;
 		long k = 0;

@@ -1,6 +1,7 @@
 #ifndef AOM
 #define AOM
 #include "tweezer.h"
+//TODO refactor aom -> aod
 class Aom{
 	public:
 		Tweezer** tweezers;//array of tweezer pointers
@@ -8,7 +9,7 @@ class Aom{
 		float* table; //table containing all the parameters of the tweezers
 			      
 		//TODO make it refere to the table
-		float A{1.0},N{2.0};//Amplitude and Normalisation of a given Aom
+		float A{1.0},N{1.0};//Amplitude and Normalisation of a given Aom
 
 		Aom();
 		~Aom();

@@ -27,14 +27,14 @@ namespace coreCalc{
 void startTimer();
 long getTimer(std::chrono::time_point<std::chrono::system_clock> timer);
 
-void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D);
+void startCore(Scheduler& scheduler, void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1D, Aom2D& aom2D);
 
 void calculateCPU(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D, long currentTick, int16_t* buff);
 void calculateSegment(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D, long tick, int16_t* segment_buffer);
 void calculate_tick(const Aom1D aom1D,const Aom2D aom2D,const long tick, int16_t& buff);
 void calculate_tweezer(Aom1D& aom1D,Aom2D& aom2D,int tweezer, long initial_tick, int16_t* buff);
 
-int16_t* calculateGPU(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D, long currentTick, CoreGPU& gpu, int16_t* buffer);
+int16_t* calculateGPU(Scheduler& scheduler, Aom& aom, long currentTick, CoreGPU& gpu, int16_t* buffer);
 
 
 long findTickAssociatedToSegment(int segement, long lastTick);
@@ -45,6 +45,8 @@ int getCurrentCardSegment(Card& card);
 #endif
 void pushSegmentToCard(int segment,int16_t data);
 inline int findSegmentAssociatedToTick(long tick);
+
+void copyTo4chBuff(int16_t* dest,int16_t* src,size_t length,float factor);
 }
 
 #endif

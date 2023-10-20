@@ -190,8 +190,18 @@ void Scheduler::callTimeEvent(long tick){
 	
 }
 
-Scheduler::Scheduler(const Aom& aom):aom(aom),logFile("res/sch.txt") {
+Scheduler::Scheduler(Aom& aom):aom(aom),logFile("res/sch.txt") {
 	aomHistory.push_front(*(new AomHistoryPoint(aom,0)));
 	aomHistoryIterator = aomHistory.rbegin();
 	
+}
+
+//return true if the scheduler doesnt have anything to play anymore (dont take into account timeEvent)
+bool Scheduler::isEmpty(){
+	return (tas.getN()<=0) && (activeGenerators.size()<=0);
+}
+
+//look only at scheduled timeEvents
+bool Scheduler::isEmptyTimeEvent(){
+	return (timeEventHeap.getN()<=0);
 }

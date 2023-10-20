@@ -1,13 +1,17 @@
 #include "card.h"
 #include <iostream>
 #include <cmath>
+#include <cstring>
 Card* Card::card = nullptr;
+std::barrier recordDispenserBarrier(1,[]() noexcept {std::cout << "Completion reached\n\n";});//to resume the dispenser 
 Card::Card() {
 	Card::card = this;
 	initCard();
-	initTransfert();
+	
+	//init transfert in now called later by the core
+	//initTransfert();
 }
-Card::~Card(){
+Card::~Card() {
 	spcm_vClose(hDrv);
 	free(buffer);
 }
@@ -37,7 +41,7 @@ int Card::initCard(){
 		exit(0); // and leave the program
 	}
 
-	//channel selection //TODO multichannel mode
+	//channel selection 
 	spcm_dwSetParam_i64(hDrv, SPC_CHENABLE, CHANNEL0|CHANNEL1|CHANNEL2|CHANNEL3);
 
 	//output enable
@@ -54,10 +58,10 @@ int Card::initCard(){
 	printf("Number of activated channels with this bitmask: %d\n", lChCount);
 
 	//max amplitude
-	spcm_dwSetParam_i32(hDrv, SPC_AMP0, 1000);
-	spcm_dwSetParam_i32(hDrv, SPC_AMP1, 1000);
-	spcm_dwSetParam_i32(hDrv, SPC_AMP2, 1000);
-	spcm_dwSetParam_i32(hDrv, SPC_AMP3, 1000);
+	spcm_dwSetParam_i32(hDrv, SPC_AMP0, 300);
+	spcm_dwSetParam_i32(hDrv, SPC_AMP1, 300);
+	spcm_dwSetParam_i32(hDrv, SPC_AMP2, 200);
+	spcm_dwSetParam_i32(hDrv, SPC_AMP3, 300);
 	if (spcm_dwGetErrorInfo_i32(hDrv, NULL, NULL, szErrorText) != ERR_OK) // check for an error
 	{
 		printf(szErrorText); // print the error text
@@ -78,7 +82,7 @@ int Card::initCard(){
 
 	spcm_dwSetParam_i64(hDrv, SPC_LOOPS, 0);//no loops
 
-	spcm_dwSetParam_i64(hDrv, SPC_DATA_OUTBUFSIZE,16 * 2 * 256 * 1024);
+ 	spcm_dwSetParam_i64(hDrv, SPC_DATA_OUTBUFSIZE,HW_BUFFER);
 	spcm_dwSetParam_i32(hDrv, SPC_M2CMD, M2CMD_CARD_WRITESETUP);
 
 	if (spcm_dwGetErrorInfo_i32(hDrv, NULL, NULL, szErrorText) != ERR_OK) // check for an error
@@ -99,17 +103,34 @@ void Card::initTransfert(){
 		//creating the buffer
 		printf("hardware buffer max is %ld bytes\n",bufsizeInSamples*2);
 		buffer = (int16*)malloc(bufsizeInSamples * sizeof(int16)); 
+
+		//start the record dispenser
+		recordDispenserBarrier.arrive();
+		/*
 		for (int i=0;i<bufsizeInSamples;i++){
 			buffer[i]=-15000;//initialize buffer//DEBUG non zero to see the diff
 		}
-
-		spcm_dwDefTransfer_i64(hDrv, SPCM_BUF_DATA, SPCM_DIR_PCTOCARD, 4*8*1024,
+		*/
+ 		spcm_dwDefTransfer_i64(hDrv, SPCM_BUF_DATA, SPCM_DIR_PCTOCARD, NOTIF_SIZE,
 			(void*)buffer, 0, 2 * bufsizeInSamples);
 
-		//load the buffer of the card with blank data
+		//wait for the record dispenser to fill the buffer
+		recordDispenserMutex.lock();
+		recordDispenserMutex.unlock();
+
+		//load 1/2buffer 
 		spcm_dwSetParam_i64(hDrv, SPC_DATA_AVAIL_CARD_LEN, bufsizeInSamples);
 		spcm_dwSetParam_i32(hDrv, SPC_M2CMD, M2CMD_DATA_STARTDMA);
-		//spcm_dwSetParam_i32(hDrv, SPC_M2CMD, M2CMD_DATA_WAITDMA);
+		spcm_dwSetParam_i32(hDrv, SPC_M2CMD, M2CMD_DATA_WAITDMA);
+}
+void Card::start(){
+	//input async
+	//asyncInputThread = std::thread(&Card::asyncReadInput,this);
+	
+	//TODO switch to a triggered start (depending on setting) and do a reset after sequence end
+	spcm_dwSetParam_i32(hDrv, SPC_M2CMD, M2CMD_CARD_START | M2CMD_CARD_FORCETRIGGER);
+	timerEstimator = startTimer(); 
+
 }
 timespec Card::startTimer(){
 	timespec time;
@@ -124,16 +145,8 @@ long Card::getTimer(timespec timer){
 	return timespec_to_long(Card::startTimer()) - timespec_to_long(timer);
 }
 
-void Card::start(){
-	//input async
-	//asyncInputThread = std::thread(&Card::asyncReadInput,this);
-	
-	//TODO what about triggered start ?
-	spcm_dwSetParam_i32(hDrv, SPC_M2CMD, M2CMD_CARD_START | M2CMD_CARD_FORCETRIGGER);
-	timerEstimator = startTimer(); 
 
-	//asyncrhone clock synchronisation
-}
+//asyncrhone clock synchronisation
 void Card::syncClockAsync(){
 	while(1) syncClock();
 }
@@ -156,36 +169,55 @@ void Card::syncClock(){
 		}
 
 }
-//TODO try put the card adjustement part on thread to see if it changes something
+
+void Card::syncClock2(){
+ 	spcm_dwGetParam_i64(hDrv, SPC_DATA_AVAIL_USER_LEN, &availBytes);//is this slow ?
+ 
+ 	float error = availBytes - bufsizeInSamples;
+ 	float DError = (error - pastError)/newEstimator;
+ 	float DDError = (DError - pastDError)/newEstimator;
+ 	float P(-1.5e-9),DD(0.1),D(0.5e-6);//shifted by one order : P behave like I, D->P, DD->D
+ 	
+ 	ajustement = 2 - P*error + DD*DDError + D*DError;
+ 	localMax = 0;
+ 	timerEstimator = startTimer();
+ 	newEstimator = estimator = 0;
+ 	pastError = error;
+ 	pastDError = DError;
+ 
+ 	float ratio = availBytes / (float)bufsizeInSamples;
+ 	if (k % (controleRate * printRate) == 0) {
+ 			printf("disponible : %lld (%f)->%f,\n",availBytes / 1000, ratio, ajustement);
+ 			printf("errror %fM, DDError %f, DError %f \n",error/1'000'000, DDError, DError);
+ 			printf("localMax %ld\n",  localMax);
+ 		}
+	localMax = 0;
+}
 void Card::updateEstimation(){
+
 
 	newEstimator = getTimer(timerEstimator);
 	long diff = (newEstimator - estimator) *(SAMPLE_RATE/1'000'000) * ajustement;
 
-	tick = oldTick + diff/2/4;
+	tick = oldTick + diff/2/4;//TODO more reliable counter
 	k++;
-	if (diff > 1024) {
+	if (diff > 8*1024) {
 		estimator = newEstimator;
 		localMax = localMax < diff ? diff : localMax;
 		spcm_dwSetParam_i64(hDrv, SPC_DATA_AVAIL_CARD_LEN, diff*4);//is this slow ? 
 		//printf("sended %d\n",diff);
 		c++;
 		oldTick = tick;
+
+		//allow the record dispenser to resume writing in the buffer
+		recordDispenserBarrier.arrive();
+
 	}
 
-	//version where clock synchronisation is synchrone
 	
+	//syncronisation every few cycles, with a PID
 	if (k % controleRate == 0) {
-		syncClock();
-		
-		//TODO rewrite this adjustement
-		/*if (ratio > securityThreshold) {
-			spcm_dwSetParam_i64(hDrv, SPC_DATA_AVAIL_CARD_LEN, std::max(0.0, (ratio - securityThreshold+0.01)* bufsizeInSamples));
-			//printf("underun security triggerd\n");
-		}*/
-
-
-
+		syncClock2();
 	}
 	
 	
@@ -193,22 +225,26 @@ void Card::updateEstimation(){
 	//spcm_dwSetParam_i32(hDrv, SPC_M2CMD, M2CMD_DATA_WAITDMA);
 	if (spcm_dwGetErrorInfo_i32(hDrv, NULL, NULL, szErrorText) != ERR_OK) // check for an error
 	{
-		printf("llAvailBytes %d\n", availBytes); 
-		printf("push stat %d,%d, %f\n", c, k, c / (float)k);
-		printf("localMax %d\n", localMax);
-		printf(szErrorText); // print the error text	
+		printf("llAvailBytes %lld\n", availBytes); 
+		printf("push stat %ld,%ld, %f\n", c, k, c / (float)k);
+		printf("localMax %ld\n", localMax);
+		printf("%s\n",szErrorText); // print the error text	
 
 		spcm_vClose(hDrv); // close the driver
 		exit(0); // and leave the program
 	}
 
 }
+
 int Card::readInput(){
+
 	int value = 0;
 	spcm_dwGetParam_i32 (card->hDrv, SPCM_XX_ASYNCIO, &value);
 	return value;
 }
 
+//this need a time limitation : it runs about every 5us and brick the card.
+//if we add a "wait Xus", it might be an interesting tool
 void Card::asyncReadInput(){
 	while(1){
 		inputReadout = readInput();
@@ -217,4 +253,31 @@ void Card::asyncReadInput(){
 			printf("nb of mesurements : %ld * 1000 \n",freq/1000);
 		}
 	}
+}
+
+//looping to write the recording in the card buffer in advance. locking until new bytes are ready to be written
+//TODO implement reset controle/end of sequence
+void Card::recordDispenser(int16_t* record, size_t MaxLength){
+
+	size_t writtenSamples = 0;
+	while(writtenSamples<MaxLength){
+
+		//wait for the card
+		recordDispenserBarrier.wait();
+
+		recordDispenserMutex.lock();
+		//fill half of the buffer
+		for(;writtenSamples<tick+bufsizeInSamples/2;writtenSamples+=SEGMENT_SIZE){
+			size_t placeInBuffer = writtenSamples%bufsizeInSamples;
+			memcpy(&buffer[placeInBuffer],&record[writtenSamples],SEGMENT_SIZE);
+		}
+
+		recordDispenserMutex.unlock();
+
+		
+
+	}
+
+
+
 }

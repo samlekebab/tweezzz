@@ -14,7 +14,7 @@ class FormGenerator:public Node{
 		virtual ~FormGenerator();
 		FormGenerator();
 		float* target;
-		float _beginningValue;//used by the scheduler to recover when rewinding before bounds.start, please don't write it
+		float _beginningValue;//used by the scheduler to recover when rewinding before bounds.start, please don't write it. EDIT : not true anymore (TODO : to check) 
 		static Scheduler* scheduler;
 		virtual float calc(long ticks)=0;	//takes ticks number from the begining of the generator (scheduled time)
 		virtual long getDuration()=0;		//return the number of ticks (sample time) that the Form generator takes (cannot change after registration to the scheduler)
@@ -24,6 +24,8 @@ class FormGenerator:public Node{
 		Bounds connect(float& target);//registration to the scheduler at EOFT, return the begining and end of the formGenerator in absolute
 		Bounds connect(long tick,float& target);//registration to the scheduler at absolute time "tick"
 		Bounds connectRelative(long tick, float& target);//registration to the scheduler with time delay with respect to EOFT
+
+		static int recordMode;//set to signal if it is not real time
 
 };
 

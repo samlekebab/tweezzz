@@ -187,17 +187,16 @@ int16_t* CoreGPU::calculate(long tick, int16_t* buffer){
 
 }
 
-int CoreGPU::setParams(Aom1D& aom1D,Aom2D& aom2D, int j){
-	//TODO this 4 is the number of params of a tweezer, not great to hard code it like that : 
+int CoreGPU::setParams(Aom& aom, int j){
+	//this 4 is the number of params of a tweezer, not great to hard code it like that : 
 	//if it changes some day we will probably forget to change this value... 
 	//hahaha it happened, now i correct it but i left this comment because it makes me laugh
-	int length = aom1D.tweezerCount*Tweezer::nbOfParam*sizeof(float);
+	int length = aom.tweezerCount*Tweezer::nbOfParam*sizeof(float);
 	clEnqueueWriteBuffer(queue,cl_aomBuffer,CL_TRUE,j*length,
 			length,
-			aom1D.table,
+			aom.table,
 		0,NULL,NULL);//wtf putting cl_false(asynchrone load) kills the performances !?
 	
-	//TODO the tables of aom2D
 
 	return 0;
 }

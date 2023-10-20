@@ -9,6 +9,8 @@
 #include "coregpu.h"
 
 #include "setting.h"
+#include "formGenerator.h"
+#include <cstring>
 
 using namespace std;
 
@@ -50,11 +52,11 @@ int getCurrentCardSegment(Card& card){
 }
 #endif
 
-void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
+void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1D, Aom2D& aom2D){
 #ifndef no_card_connected
 	Card card;
 #else
-	int16_t* g_buffer = new int16_t[SEGMENT_SIZE * BUFFER_SIZE];
+	int16_t* g_buffer = new int16_t[SEGMENT_SIZE * BUFFER_SIZE * 4];
 #endif
 
 #ifdef GPU_calculation
@@ -62,7 +64,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 	//CoreGPU gpu1;//TODO use a qeue
 	CoreGPU gpu2;
 #else
-	printf("CPU calculation");
+	printf("CPU calculation code is'nt up to date !!");//TODO (see below)
 #endif
 
 	//DEBUG
@@ -75,18 +77,75 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 	FILE* f = fopen("./res/cpp.txt","w");
 #endif
 	
+#ifdef CPU_calculation
 	//preparing the luts for "all" frequencies
 	//TODO is it used anymore ? 
 	mmath::fillUpTable();
+#endif
 
+	//TODO do the calculation of recorded signal
+	//for the moment, no CPU calculation, TODO should it be maintained 
+#ifdef GPU_calculation
+	size_t maxLength = 0;
+	printf("record\n");
+	Aom* aomTable[3] = {&aom1D, &aom2D.H, &aom2D.V};//TODO chose the order	
+	int16_t* recording;
+	FormGenerator::recordMode = true;
+
+	//this is not greate because we are calling the sequence 3 times...
+	//TODO any idea to improve ?
+	for (int i=0;i<3;i++){
+		printf("aomTable %d\n",i);
+		//the aom given here could help debug sequence if we recover the aomhistory of this scheduler.
+		Scheduler recordScheduler(*aomTable[i]);//TODO chang log file of this scheduler to beter debug of the sequence
+		FormGenerator::scheduler = &recordScheduler;
+
+
+		//first we put the sequence in the scheduler
+		sequence(aom1D,aom2D);
+
+		//allocation of memory
+		if (i==0){
+			printf("allocation of %ld samples * 4 channels for the recording = %f GB\n",recordScheduler.EOFT,recordScheduler.EOFT* 2 * 4/(float)1073741824);
+			recording = new int16_t[4 * (recordScheduler.EOFT+SEGMENT_SIZE)];
+			memset((void*)recording,0,4 * (recordScheduler.EOFT+SEGMENT_SIZE) * 2);
+			maxLength = recordScheduler.EOFT;
+		}
+		
+		//then we compute the sequence until the scheduler is empty
+		for (long tick=0;tick<recordScheduler.EOFT;tick+=SEGMENT_SIZE){
+			calculateGPU(recordScheduler,*aomTable[i],tick,gpu2,gpu2.outBuffer);
+			copyTo4chBuff(&recording[4*tick+i],gpu2.outBuffer,SEGMENT_SIZE,aomTable[i]->N*aomTable[i]->A);
+		}
+
+		printf("aomTable %d done\n",i);
+	}
+	//start the recordDispenser
+#ifndef no_card_connected
+	thread recordDispenser = Thread(card.recordDispenser,card,recording,maxLength);
+#endif
+
+	//back to normal, ie real time mode
+	FormGenerator::recordMode = false;
+	FormGenerator::scheduler = &scheduler;
+
+#endif
+
+#ifndef no_card_connected
+	card.initTransfert();
+#endif
+
+	this_thread::yield();
+	printf("start\n");
 
 #ifdef no_card_connected
 	startTimer();
-	//printf("start\n");
 #else
 	card.start();
 #endif
-	int debug=0;
+
+
+	int debug=0;//DEBUG
 	while(1){
 		//first, synchronize with card to know when we are, call time related events
 #ifdef no_card_connected
@@ -95,8 +154,6 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 		currentSegment = getCurrentCardSegment(card);
 #endif
 		currentTick = findTickAssociatedToSegment(currentSegment,currentTick);
-		//cout<<"current segment "<<currentSegment<<endl;
-		//cout<<"currentTick "<<currentTick<<endl;
 		
 		//update the Time related events 
 		scheduler.callTimeEvent(currentTick);
@@ -110,7 +167,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 		//in case we drop behind TODO code an "emergency" stop (or beter notification system ?) if the drop happen at critical time (when we manipulate atomes
 		tickToCompute = max(currentTick+(long)SAFE_TICK,tickToCompute);
 		if (tickToCompute == currentTick + SAFE_TICK){
-			printf("dropping at tick %d\n",tickToCompute);
+			printf("dropping at tick %ld\n",tickToCompute);
 			drop++;
 			//put at the begining of the next segment
 			tickToCompute = ((tickToCompute-1)/SEGMENT_SIZE + 1)*SEGMENT_SIZE;
@@ -132,8 +189,15 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 			int16_t* buff = &card.buffer[tickOfBuffer];
 #endif
 
+			//TODO copy recorded channels in the card buffer
+			//alternatively, the copy could be done in parallele and much more in sooner than the real time calculation
+		
+			
+//TODO implement the selection of which channel compute at compile time (and then channel change during sequence -> create a phase adapter (or full adapter) to prevent phase (or signal ?) jump when returning to recorded signal)
+#ifdef RT_CALCULATION
 #ifdef GPU_calculation
-			//int16_t* toCopy = calculateGPU(scheduler,aom1D,aom2D,tickToCompute,gpu2,gpu2.outBuffer);
+			int16_t* toCopy = calculateGPU(scheduler,aom1D,tickToCompute,gpu2,gpu2.outBuffer);
+			//DEBUG
 			for (int i=0;i<SEGMENT_SIZE*4;i++){
 				//buff[i] = aom1D.A * aom1D.N * toCopy[i];
 				buff[i] = aom1D.A * (int16_t)(debug*500);
@@ -143,21 +207,17 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 			}
 			debug++;
 
-#else
+#endif
+#ifdef CPU_calculation
 			calculateCPU(scheduler, aom1D, aom2D, tickToCompute, buff);
+#endif
 #endif
 
 			//notify the scheduler that we computed this tick
 			scheduler.nextTickToCompute = tickToCompute + SEGMENT_SIZE;
 			//TODO add another rollback check -> print any negative result (and abbort ?)
 
-//			for (size_t i=0;i<96000;i++){
-//				printf("res %d : %d\n",i,gpu.outBuffer[i]);
-//			}
-		
-
 			//depending on wich setting we are, we save data, count MS/s, stop the loop etc..
-			//TODO
 #ifdef 	file_output
 			for (int i{0};i<SEGMENT_SIZE;i++){
 				fprintf(f,"%d\n",buff[i]);
@@ -166,17 +226,7 @@ void startCore(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D){
 #endif
 
 
-#ifdef opti_prevent
-			for (int i{0};i<SEGMENT_SIZE;i++){
-				counter++;
-				sum+=buff[4*i];
-			}
-			if (sum%1234567==0){
-				cout<<"surprise : "<<sum<<endl;
-			}
-#else
 			counter+=SEGMENT_SIZE;
-#endif
 
 		}else{
 			//printf("max tick reached\n");
@@ -226,6 +276,7 @@ void calculateSegment(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D, long tic
 	//for now, we use only this thread
 	
 	//solution 1, for each tick, for each tweezer
+	//slower than solution 2
 	/*for (int i{0};i<SEGMENT_SIZE;i++){
 		calculate_tick(aom1D,aom2D,tick+i, segment_buffer[i]);
 	}*/
@@ -237,14 +288,16 @@ void calculateSegment(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D, long tic
 	}
 		
 }
+//TODO now segments are very long and SEGMENT_SIZE / segment by segment calculation should be replace by BATCH_SIZE
+//TODO linar interpolation (of w and A?) (to do also in GPU calculation)
 void calculate_tweezer(Aom1D& aom1D, Aom2D& aom2D,int tweezer, long initial_tick, int16_t* buff){
 	const auto tw = *aom1D.tweezers[tweezer];
 	const auto w{tw.w},p{tw.p};
 	const int16_t f = MAX_VALUE*(tw.A*tw.N*aom1D.A*aom1D.N/aom1D.tweezerCount);
 	const int b=mmath::lut(w);
 	//find the phase
-	int t2 = fmod(initial_tick,600'000'000/(float)w);
-	//TODO convert and add fixed phase p
+	int t2 = fmod(initial_tick,SAMPLE_RATE/(float)w);
+	//TODO convert (??) and add fixed phase p
 
 	const float* table = &mmath::sin[b+t2];
 	
@@ -252,9 +305,11 @@ void calculate_tweezer(Aom1D& aom1D, Aom2D& aom2D,int tweezer, long initial_tick
 		//vectorizable with a dl approxiation of the sinus?
 		//or with lut like i tryed
 		int16_t tmp  = f * table[i]; 
+
+		//other versions of this line : 
 		/*sinLut_t2[1+i]; //sin(w*((double)i+SEGMENT_SIZE)/6.0e8 + p);*/
 
-
+		//TODO channel choice (currently ch0 only)
 		buff[4*i] += tmp;
 
 	}
@@ -289,18 +344,18 @@ long findTickAssociatedToSegment(int segment, long lastTick){
 	return (m*BUFFER_SIZE+(long)segment)*SEGMENT_SIZE;
 }
 
-int16_t* calculateGPU(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D,long tickToCompute,CoreGPU& gpu,int16_t* buffer){
+int16_t* calculateGPU(Scheduler& scheduler, Aom& aom, long tickToCompute,CoreGPU& gpu,int16_t* buffer){
 	
 	for(int i=0;i<(SEGMENT_SIZE/BATCH_SIZE);i++){
 		//recompute the scheduler: 
 		scheduler.computeSample(tickToCompute + i*BATCH_SIZE);
-		//send it to the gpu
-		//compute the accumulated phase during a batch
-		gpu.setParams(aom1D,aom2D,i);
-		for(int j=0;j<100;j++){//TODO hard codded tweezer number
-			float& pr = aom1D.tweezers[j]->pr ;
-			float& w = aom1D.tweezers[j]->w ;
-			float& a = aom1D.tweezers[j]->A ;
+		//send aom to the gpu
+		gpu.setParams(aom,i);
+		//compute the accumulated phase during a batch TODO fix phase shift from low accuracy of float
+		for(int j=0;j<aom.tweezerCount;j++){
+			float& pr = aom.tweezers[j]->pr ;
+			float& w = aom.tweezers[j]->w ;
+			float& a = aom.tweezers[j]->A ;
 			pr += fmod(w * (2*3.14159265358979323846*(BATCH_SIZE)/(double)SAMPLE_RATE)  , 2*3.14159265358979323846);
 		//printf("pr%d : %f\n",j,pr);
 		}
@@ -308,5 +363,10 @@ int16_t* calculateGPU(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D,long tick
 	//calculate the segment
 	return gpu.calculate(tickToCompute, buffer);
 	
+}
+void copyTo4chBuff(int16_t* dest,int16_t* src,size_t length,float factor){
+	for (size_t i=0;i<length;i++){
+		dest[4*i] = factor * src[i];
+	}
 }
 }

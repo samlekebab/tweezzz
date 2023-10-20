@@ -26,7 +26,7 @@ class CoreGPU{
 		float phase = 0.5f16;
 
 		int loadCoreKernel();
-		int setParams(Aom1D& aom1D,Aom2D& aom2D, int i);
+		int setParams(Aom& aom, int i);
 		int16_t* calculate(long tick,int16_t* buffer);
 };
 #endif

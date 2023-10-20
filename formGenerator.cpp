@@ -41,6 +41,7 @@ FormGenerator::FormGenerator():id(idIt++) {}
 FormGenerator::~FormGenerator(){if(tag){delete[] tag;}}
 Scheduler* FormGenerator::scheduler=nullptr;
 int FormGenerator::idIt = 0;
+int FormGenerator::recordMode = false;
 //double FormGenerator::calc(long ticks){return 0;}
 //long FormGenerator::getDuration(){return 0;}	
 //void FormGenerator::setBeginningValue(double value){}

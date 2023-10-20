@@ -11,8 +11,18 @@ Aom::Aom():tweezerCount(100){
 }
 Aom::~Aom(){
 	printf("aom destructor\n");
+	if (table == nullptr){
+		printf("freeing nullptr table..");
+		return;
+	}
 	delete[] table;
-	delete[] tweezers;
+	table = nullptr;
+	if (tweezers == nullptr){
+		printf("freeing nullptr tweezers..");
+		return;
+	}
+	//delete[] tweezers;
+	tweezers = nullptr;
 }
 void Aom::copyTable(const Aom& aom_to_copy){
 	int nb = tweezerCount*Tweezer::nbOfParam;

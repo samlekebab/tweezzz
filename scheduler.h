@@ -57,7 +57,7 @@ class Scheduler{
 
 		Tas timeEventHeap;
 
-		Aom aom;
+		Aom& aom;
 		std::list<AomHistoryPoint> aomHistory;//tick decreasing
 		std::list<AomHistoryPoint>::reverse_iterator aomHistoryIterator;
 		
@@ -77,9 +77,14 @@ class Scheduler{
 		void callTimeEvent(long tick);
 
 
-		Scheduler(const Aom& aom);
+		bool isEmpty();//return true if the scheduler doesnt have anything to play anymore (dont take into account timeEvent)
+		bool isEmptyTimeEvent();//look only at scheduled timeEvents
+
+
+		Scheduler(Aom& aom);
+
 	private :
-		Scheduler():logFile("res/sch.txt"){}
+		//Scheduler():logFile("res/sch.txt"){}
 		void putInList(FormGenerator* f,long tick);
 		void saveAom(long tick);
 	
