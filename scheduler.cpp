@@ -5,6 +5,7 @@
 #include <cmath>
 #include "setting.h"
 #include "timeEvent.h"
+#include <format>
 
 using namespace std;
 void Scheduler::addFormGenerator(FormGenerator* f){
@@ -63,7 +64,7 @@ void Scheduler::addFormGenerator(FormGenerator* f){
 		logFile<<"put it in the heap"<<endl;
 #endif
 		tas.push(f);
-		tas.print();
+		//tas.print();
 	}
 	EOFT = max(EOFT,f->bounds.end);
 
@@ -76,7 +77,7 @@ void Scheduler::addTimeEvent(TimeEvent* t){
 	logFile<<"adding TimeEvent"<<endl;
 #endif
 	timeEventHeap.push(t);
-	timeEventHeap.print();
+	//timeEventHeap.print();
 	EOFT = max(EOFT,t->bounds.end);
 
 }
@@ -90,6 +91,7 @@ long Scheduler::computeSample(long tick){
 			break;
 
 		auto f = (FormGenerator*)tas.pop();
+		//tas.print();
 #ifdef sch_log
 		logFile<<"new form generator in the list "<<f->id<<" "<<f->bounds.start<<" ; "
 		<<f->bounds.end<<" ";
@@ -181,16 +183,16 @@ void Scheduler::callTimeEvent(long tick){
 	auto oldGeneratorsIterator = oldGenerators.rbegin();
 	while(oldGeneratorsIterator != oldGenerators.rend() && (*oldGeneratorsIterator)->bounds.end<tick){
 	
-		printf("c/\n");
+		//printf("c/\n");
 		oldGenerators.pop_back();
 		oldGeneratorsIterator = oldGenerators.rbegin();
-		printf("%d/\n",oldGenerators.size());
+		//printf("%d/\n",oldGenerators.size());
 	}
 
 	
 }
 
-Scheduler::Scheduler(Aom& aom):aom(aom),logFile("res/sch.txt") {
+Scheduler::Scheduler(Aom& aom,int channel):aom(aom),logFile(std::format("res/sch_ch{}.txt",channel)) {
 	aomHistory.push_front(*(new AomHistoryPoint(aom,0)));
 	aomHistoryIterator = aomHistory.rbegin();
 	

@@ -46,10 +46,19 @@ int getCurrentCardSegment(){
 }
 #else
 int getCurrentCardSegment(Card& card){
-	card.updateEstimation();
+	//card.updateEstimation();
 	//printf("estimated card tick : %ld\n",card.tick);
 	return (card.tick/(long)SEGMENT_SIZE)%BUFFER_SIZE;
 }
+void cardUpdater(Card& card){//, mutex& cardMutex){
+        while(1){
+                //cardMutex.lock();
+                card.updateEstimation();
+                //cardMutex.unlock();
+                //this_thread::yield();
+        }
+}
+
 #endif
 
 void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1D, Aom2D& aom2D){
@@ -88,7 +97,7 @@ void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1
 #ifdef GPU_calculation
 	size_t maxLength = 0;
 	printf("record\n");
-	Aom* aomTable[3] = {&aom1D, &aom2D.H, &aom2D.V};//TODO chose the order	
+	Aom* aomTable[3] = {&aom2D.V, &aom2D.H, &aom1D};
 	int16_t* recording;
 	FormGenerator::recordMode = true;
 
@@ -97,7 +106,7 @@ void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1
 	for (int i=0;i<3;i++){
 		printf("aomTable %d\n",i);
 		//the aom given here could help debug sequence if we recover the aomhistory of this scheduler.
-		Scheduler recordScheduler(*aomTable[i]);//TODO chang log file of this scheduler to beter debug of the sequence
+		Scheduler recordScheduler(*aomTable[i],i);//TODO chang log file of this scheduler to beter debug of the sequence
 		FormGenerator::scheduler = &recordScheduler;
 
 
@@ -107,6 +116,7 @@ void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1
 		//allocation of memory
 		if (i==0){
 			printf("allocation of %ld samples * 4 channels for the recording = %f GB\n",recordScheduler.EOFT,recordScheduler.EOFT* 2 * 4/(float)1073741824);
+			printf("size of int16_t : %ld\n",sizeof(int16_t));
 			recording = new int16_t[4 * (recordScheduler.EOFT+SEGMENT_SIZE)];
 			memset((void*)recording,0,4 * (recordScheduler.EOFT+SEGMENT_SIZE) * 2);
 			maxLength = recordScheduler.EOFT;
@@ -120,9 +130,19 @@ void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1
 
 		printf("aomTable %d done\n",i);
 	}
+	
+	//save the record on file
+#ifdef SAVE_RECORDING
+	auto path = SAVE_RECORDING;
+	printf("saving recording in binnary format, path : %s\n",path);
+	auto recordFile = fopen(path,"wb");
+	fwrite(recording,2,4*(maxLength+SEGMENT_SIZE),recordFile);
+	fclose(recordFile);
+#endif
+
 	//start the recordDispenser
 #ifndef no_card_connected
-	thread recordDispenser = Thread(card.recordDispenser,card,recording,maxLength);
+	thread recordDispenser = thread(&Card::recordDispenser,&card,recording,maxLength);
 #endif
 
 	//back to normal, ie real time mode
@@ -142,6 +162,7 @@ void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1
 	startTimer();
 #else
 	card.start();
+	std::thread cardUpdaterThread1(cardUpdater,ref(card));
 #endif
 
 
@@ -189,8 +210,6 @@ void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1
 			int16_t* buff = &card.buffer[tickOfBuffer];
 #endif
 
-			//TODO copy recorded channels in the card buffer
-			//alternatively, the copy could be done in parallele and much more in sooner than the real time calculation
 		
 			
 //TODO implement the selection of which channel compute at compile time (and then channel change during sequence -> create a phase adapter (or full adapter) to prevent phase (or signal ?) jump when returning to recorded signal)

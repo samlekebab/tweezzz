@@ -23,9 +23,12 @@ class Ramp:public FormGenerator{
 		}
 
 		//take a sampletime with the beginning as origin and return a value between 0 and 1
+		int ii = 0;
 		float calc(long time){
 			*target = initial + (float)time/setting.duration * (setting.finalValue - initial);
-			//printf("%f\n",*target);
+			if (ii%1'000 ==0)
+				//printf("id %d, %f\n",id,*target);
+			ii++;
 			return *target;
 		
 		}

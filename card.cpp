@@ -3,7 +3,8 @@
 #include <cmath>
 #include <cstring>
 Card* Card::card = nullptr;
-std::barrier recordDispenserBarrier(1,[]() noexcept {std::cout << "Completion reached\n\n";});//to resume the dispenser 
+
+std::barrier recordDispenserBarrier(2,[]() noexcept {});//to resume the dispenser 
 Card::Card() {
 	Card::card = this;
 	initCard();
@@ -104,13 +105,13 @@ void Card::initTransfert(){
 		printf("hardware buffer max is %ld bytes\n",bufsizeInSamples*2);
 		buffer = (int16*)malloc(bufsizeInSamples * sizeof(int16)); 
 
+		for (int i=0;i<bufsizeInSamples;i++){
+			buffer[i]=15000;//initialize buffer//DEBUG non zero to see the diff
+		}
+		
 		//start the record dispenser
 		recordDispenserBarrier.arrive();
-		/*
-		for (int i=0;i<bufsizeInSamples;i++){
-			buffer[i]=-15000;//initialize buffer//DEBUG non zero to see the diff
-		}
-		*/
+		
  		spcm_dwDefTransfer_i64(hDrv, SPCM_BUF_DATA, SPCM_DIR_PCTOCARD, NOTIF_SIZE,
 			(void*)buffer, 0, 2 * bufsizeInSamples);
 
@@ -173,25 +174,24 @@ void Card::syncClock(){
 void Card::syncClock2(){
  	spcm_dwGetParam_i64(hDrv, SPC_DATA_AVAIL_USER_LEN, &availBytes);//is this slow ?
  
- 	float error = availBytes - bufsizeInSamples;
+	avgAvailBytes = avg * availBytes + (1.0-avg) * avgAvailBytes;//average mesurements
+ 	float error = availBytes - bufsizeInSamples;//TODO divid by time ?
  	float DError = (error - pastError)/newEstimator;
- 	float DDError = (DError - pastDError)/newEstimator;
- 	float P(-1.5e-9),DD(0.1),D(0.5e-6);//shifted by one order : P behave like I, D->P, DD->D
+ 	IError += error * newEstimator * 1e-6;
  	
- 	ajustement = 2 - P*error + DD*DDError + D*DError;
- 	localMax = 0;
+ 	ajustement = 2.00 + P*error + I*IError + D*DError;
  	timerEstimator = startTimer();
  	newEstimator = estimator = 0;
  	pastError = error;
- 	pastDError = DError;
  
  	float ratio = availBytes / (float)bufsizeInSamples;
  	if (k % (controleRate * printRate) == 0) {
  			printf("disponible : %lld (%f)->%f,\n",availBytes / 1000, ratio, ajustement);
- 			printf("errror %fM, DDError %f, DError %f \n",error/1'000'000, DDError, DError);
+ 			printf("errror %fM, IError %f, DError %f \n",error/1'000'000, IError, DError);
  			printf("localMax %ld\n",  localMax);
  		}
 	localMax = 0;
+	
 }
 void Card::updateEstimation(){
 
@@ -209,8 +209,14 @@ void Card::updateEstimation(){
 		c++;
 		oldTick = tick;
 
-		//allow the record dispenser to resume writing in the buffer
-		recordDispenserBarrier.arrive();
+
+		diffSum +=diff;
+		if (diffSum>SEGMENT_SIZE*4*2){
+			//allow the record dispenser to resume writing in the buffer
+			//printf("unlocking record dispenser\n");
+			auto dump = recordDispenserBarrier.arrive();
+			diffSum = 0;
+		}
 
 	}
 
@@ -258,24 +264,32 @@ void Card::asyncReadInput(){
 //looping to write the recording in the card buffer in advance. locking until new bytes are ready to be written
 //TODO implement reset controle/end of sequence
 void Card::recordDispenser(int16_t* record, size_t MaxLength){
+	while(1){
+		size_t writtenSamples = 0;
+		printf("recording length : %ld\n",MaxLength);
+		while(writtenSamples<MaxLength){
 
-	size_t writtenSamples = 0;
-	while(writtenSamples<MaxLength){
+			//wait for the card
+			recordDispenserBarrier.arrive_and_wait();
+			recordDispenserMutex.lock();
+			//fill half of the buffer
+			size_t min = tick+bufsizeInSamples/2;
+			min = min<MaxLength?min:MaxLength;
+			//printf("wait ended, writing : %ld samples in buffer\n",min-writtenSamples);
+			for(;writtenSamples<min;writtenSamples+=SEGMENT_SIZE){
+				size_t placeInBuffer = (4*writtenSamples)%bufsizeInSamples;
+				
+				memcpy(&buffer[placeInBuffer],&record[4*writtenSamples],SEGMENT_SIZE*4 * 2);
+			}
 
-		//wait for the card
-		recordDispenserBarrier.wait();
+			//printf("record dispenser done, waiting\n");
+			recordDispenserMutex.unlock();
+			std::this_thread::yield();
 
-		recordDispenserMutex.lock();
-		//fill half of the buffer
-		for(;writtenSamples<tick+bufsizeInSamples/2;writtenSamples+=SEGMENT_SIZE){
-			size_t placeInBuffer = writtenSamples%bufsizeInSamples;
-			memcpy(&buffer[placeInBuffer],&record[writtenSamples],SEGMENT_SIZE);
+			
+
 		}
-
-		recordDispenserMutex.unlock();
-
-		
-
+		printf("end of recording\n");
 	}
 
 

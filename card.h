@@ -23,7 +23,7 @@ class Card{//TODO make this class closer to the equivalent class from the python
 		double ajustement = 0;
 		double securityThreshold = 1.8;
 		int controleRate = 1000;
-		int printRate = 1000;
+		int printRate = 1600;
 		long bufsizeInSamples = BUFFER_SIZE * (long)SEGMENT_SIZE * 4;
 		int16_t* buffer;//where we are putting the data to send to the card
 
@@ -56,6 +56,7 @@ class Card{//TODO make this class closer to the equivalent class from the python
 		static long timespec_to_long(timespec time);
 		static long getTimer(timespec timer);
 
+		void initTransfert();
 		void start();
 		timespec timerEstimator;
 		void updateEstimation();
@@ -67,7 +68,8 @@ class Card{//TODO make this class closer to the equivalent class from the python
 		std::thread asyncInputThread;
 		void asyncReadInput();
 
-		long tick = 0;
+		long diffSum=0;//TODO unit all this counters (diff, diffSum, newEstimation, tick...)
+		unsigned long tick = 0;
 
 		std::mutex recordDispenserMutex;//to wait on the initialisation that the dispenser fill 1/2 of the buffer
 		
@@ -81,7 +83,11 @@ class Card{//TODO make this class closer to the equivalent class from the python
 		long localMax = 0;
 		long oldTick = 0;
 		
- 		float pastDError=0,pastError=0;
+		//for 200MHz
+		float avg = 0.5;
+		float avgAvailBytes = bufsizeInSamples;
+		float P = 6e-9,I = 5e-8, D = 2e-5;
+ 		float IError=0,pastError=0;
  		void syncClock2();
 
 		long c = 0;
@@ -89,7 +95,6 @@ class Card{//TODO make this class closer to the equivalent class from the python
 
 
 		int initCard();
-		void initTransfert();
 		void syncClockAsync();
 		void syncClock();
 

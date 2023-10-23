@@ -81,7 +81,7 @@ class Scheduler{
 		bool isEmptyTimeEvent();//look only at scheduled timeEvents
 
 
-		Scheduler(Aom& aom);
+		Scheduler(Aom& aom, int channel);
 
 	private :
 		//Scheduler():logFile("res/sch.txt"){}

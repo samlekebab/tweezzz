@@ -3,7 +3,9 @@
 using namespace std;
 bool Tas::comparer(Node* a, Node* b) {
 	long w1 = a->bounds.start;
+	//printf("w1 %ld\n",w1);
 	long w2 = b->bounds.start;
+	//printf("w2 %ld\n",w2);
 	return w2 < w1;
 }
 void Tas::echange(int i, int j) {
@@ -25,25 +27,32 @@ bool Tas::isEmpty() {
 	return n <= 0;
 }
 Node* Tas::pop() {
+	//printf("poping heap\n"); 
+	//print();
 	Node* res = tas[0];
 	n -= 1;
 	tas[0] = tas[n];
+	//print();
 	bool end = false;
 	int i = 0;
 	int tmp = 2 * i + 1;
 	while (!end && tmp < n) {
+		int j = i;
 		end = true;
 		if (comparer(tas[i], tas[tmp])) {
 			echange(i, tmp);
 			end = false;
-			i = tmp;
+			j = tmp;
 		}
-		else if (tmp + 1 < n && comparer(tas[i], tas[tmp + 1])) {
+		if (tmp + 1 < n && comparer(tas[i], tas[tmp + 1])) {
 			tmp++;
 			echange(i, tmp);
 			end = false;
-			i = tmp;
+			j = (i == j ?tmp:j);
 		}
+		tmp = 2 * j + 1;
+		i = j;
+		//print();
 	}
 	return res;
 }
