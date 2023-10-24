@@ -34,14 +34,16 @@ void FormGenerator::findAndSetBeginningValue(){
 void FormGenerator::setTag(const char* tag){
 	int i{0};
 	while (tag[++i]!='\0');
-	this->tag = new char[i];
+	this->tag = new char[i+1];
 	memcpy(this->tag,tag,i*sizeof(char));
+	this->tag[i]='\0';
 }
 FormGenerator::FormGenerator():id(idIt++) {}
 FormGenerator::~FormGenerator(){if(tag){delete[] tag;}}
 Scheduler* FormGenerator::scheduler=nullptr;
 int FormGenerator::idIt = 0;
 int FormGenerator::recordMode = false;
+float FormGenerator::fvoid = 0;
 //double FormGenerator::calc(long ticks){return 0;}
 //long FormGenerator::getDuration(){return 0;}	
 //void FormGenerator::setBeginningValue(double value){}

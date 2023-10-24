@@ -109,15 +109,17 @@ void Card::initTransfert(){
 			buffer[i]=15000;//initialize buffer//DEBUG non zero to see the diff
 		}
 		
+		std::this_thread::yield();
 		//start the record dispenser
-		recordDispenserBarrier.arrive();
+		recordDispenserBarrier.arrive_and_wait();
 		
  		spcm_dwDefTransfer_i64(hDrv, SPCM_BUF_DATA, SPCM_DIR_PCTOCARD, NOTIF_SIZE,
 			(void*)buffer, 0, 2 * bufsizeInSamples);
 
+		printf("wait dispenser\n");
 		//wait for the record dispenser to fill the buffer
-		recordDispenserMutex.lock();
-		recordDispenserMutex.unlock();
+		recordDispenserBarrier.arrive_and_wait();
+		printf("end wait dispenser\n");
 
 		//load 1/2buffer 
 		spcm_dwSetParam_i64(hDrv, SPC_DATA_AVAIL_CARD_LEN, bufsizeInSamples);
@@ -199,7 +201,7 @@ void Card::updateEstimation(){
 	newEstimator = getTimer(timerEstimator);
 	long diff = (newEstimator - estimator) *(SAMPLE_RATE/1'000'000) * ajustement;
 
-	tick = oldTick + diff/2/4;//TODO more reliable counter
+	tick = oldTick + diff/2;//TODO more reliable counter
 	k++;
 	if (diff > 8*1024) {
 		estimator = newEstimator;
@@ -264,31 +266,36 @@ void Card::asyncReadInput(){
 //looping to write the recording in the card buffer in advance. locking until new bytes are ready to be written
 //TODO implement reset controle/end of sequence
 void Card::recordDispenser(int16_t* record, size_t MaxLength){
+	int i=0;
+	//int k=0;
 	while(1){
-		size_t writtenSamples = 0;
+		size_t written4chSamples = 0;
 		printf("recording length : %ld\n",MaxLength);
-		while(writtenSamples<MaxLength){
+		while(written4chSamples<4*MaxLength){
 
 			//wait for the card
 			recordDispenserBarrier.arrive_and_wait();
 			recordDispenserMutex.lock();
 			//fill half of the buffer
-			size_t min = tick+bufsizeInSamples/2;
-			min = min<MaxLength?min:MaxLength;
-			//printf("wait ended, writing : %ld samples in buffer\n",min-writtenSamples);
-			for(;writtenSamples<min;writtenSamples+=SEGMENT_SIZE){
-				size_t placeInBuffer = (4*writtenSamples)%bufsizeInSamples;
+			//TODO round to the next buffer cycle the value MaxLength*i (dephasing of placeInBuffer)
+			size_t min = 4*(tick-MaxLength*i)+bufsizeInSamples/2;
+			min = min<4*MaxLength?min:4*MaxLength;
+
+			//printf("wait ended, writing : %ld samples in buffer\t tick : %ld, min : %ld, i : % d \n written samples was %ld\n", min-written4chSamples,tick,min,i,written4chSamples);
+			for(;written4chSamples<min;written4chSamples+=4*SEGMENT_SIZE){
+				size_t placeInBuffer = (written4chSamples)%bufsizeInSamples;
 				
-				memcpy(&buffer[placeInBuffer],&record[4*writtenSamples],SEGMENT_SIZE*4 * 2);
+				memcpy(&buffer[placeInBuffer],&record[written4chSamples],SEGMENT_SIZE* 4 * 2);
 			}
 
-			//printf("record dispenser done, waiting\n");
+			//printf("record dispenser done, waiting\t writtenSamples : %ld\n",written4chSamples);
 			recordDispenserMutex.unlock();
 			std::this_thread::yield();
 
 			
 
 		}
+		i++;
 		printf("end of recording\n");
 	}
 

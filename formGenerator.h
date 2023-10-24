@@ -7,6 +7,7 @@
 //
 class FormGenerator:public Node{
 	public:
+
 		static int idIt;
 		int id;
 		char* tag=nullptr;
@@ -27,6 +28,8 @@ class FormGenerator:public Node{
 
 		static int recordMode;//set to signal if it is not real time
 
+		static float fvoid;//to use when no target is needed
+		#define FVOID (FormGenerator::fvoid)
 };
 
 

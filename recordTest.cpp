@@ -27,7 +27,7 @@
 using namespace std;
 
 void sequence(Aom1D& aom1D, Aom2D& aom2D){
-	float bidon;
+	//float bidon;//replaced by 
 
 	/*
 	for (int i=0;i<2;i++){
@@ -46,20 +46,20 @@ void sequence(Aom1D& aom1D, Aom2D& aom2D){
 		aom2D.H.tweezers[i]->A = 	0.00;
 		aom2D.V.tweezers[i]->A = 	0.00;
 	}
-	aom2D.V.tweezers[0]->A = 0.5;
+	aom2D.V.tweezers[0]->A = 1;
 	aom2D.V.tweezers[0]->w = 105e6;
-	aom2D.H.tweezers[0]->A = 0.5;
-	aom2D.H.tweezers[0]->w = 101e6;
 	aom1D.tweezers[0]->A = 0.5;
 	aom1D.tweezers[0]->w = 80e6;
 
 
-	aom2D.V.tweezers[1]->A = 0.5;
-	aom2D.V.tweezers[1]->w = 100e6;
+	aom2D.H.tweezers[0]->A = 0.5;
+	aom2D.H.tweezers[0]->w = 101e6;
+	aom2D.H.tweezers[1]->A = 0.5;
+	aom2D.H.tweezers[1]->w = 100e6;
 
-	(new Marker())->connect(0,bidon);
+	(new Marker())->connect(0,FVOID);
 
-	long duration = 380'000'000;
+	long duration = 50'000'000;
 		(new Ramp({.duration = duration,.finalValue=95e6}))->connect(duration,aom2D.V.tweezers[0]->w);
 		(new Ramp({.duration = duration,.finalValue=105e6}))->connect(3*duration,aom2D.V.tweezers[0]->w);
 
@@ -67,7 +67,10 @@ void sequence(Aom1D& aom1D, Aom2D& aom2D){
 		(new Ramp({.duration = duration,.finalValue=(float)(111e6-i*21e6)}))->connect(1,aom2D.H.tweezers[i]->w);
 		(new Ramp({.duration = duration,.finalValue=(float)(101e6-i*1e6)}))->connect(2*duration,aom2D.H.tweezers[i]->w);
 	}
-	(new Marker())->connect(4*duration,bidon);
+	(new Marker())->connect(4*duration,FVOID);
+	
+	
+	//(new Ramp({.duration = 1'600'000'000,.finalValue = 90e6}))->connect(aom2D.V.tweezers[0]->w);
 }
 int initAndStart(){
 	//initialisation

@@ -10,7 +10,7 @@ Aom::Aom():tweezerCount(100){
 	}
 }
 Aom::~Aom(){
-	printf("aom destructor\n");
+	//printf("aom destructor\n");
 	if (table == nullptr){
 		printf("freeing nullptr table..");
 		return;

@@ -106,7 +106,7 @@ void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1
 	for (int i=0;i<3;i++){
 		printf("aomTable %d\n",i);
 		//the aom given here could help debug sequence if we recover the aomhistory of this scheduler.
-		Scheduler recordScheduler(*aomTable[i],i);//TODO chang log file of this scheduler to beter debug of the sequence
+		Scheduler recordScheduler(*aomTable[i],i);
 		FormGenerator::scheduler = &recordScheduler;
 
 
@@ -217,6 +217,7 @@ void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1
 #ifdef GPU_calculation
 			int16_t* toCopy = calculateGPU(scheduler,aom1D,tickToCompute,gpu2,gpu2.outBuffer);
 			//DEBUG
+			/*
 			for (int i=0;i<SEGMENT_SIZE*4;i++){
 				//buff[i] = aom1D.A * aom1D.N * toCopy[i];
 				buff[i] = aom1D.A * (int16_t)(debug*500);
@@ -225,6 +226,7 @@ void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1
 				}
 			}
 			debug++;
+			*/
 
 #endif
 #ifdef CPU_calculation
@@ -389,3 +391,5 @@ void copyTo4chBuff(int16_t* dest,int16_t* src,size_t length,float factor){
 	}
 }
 }
+
+

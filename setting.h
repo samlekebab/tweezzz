@@ -1,7 +1,7 @@
 //#ifndef MSETTINGS
 //#define MSETTINGS
 
-#define SAMPLE_RATE (320*1000000)
+#define SAMPLE_RATE (330*1000000)
 
 //card contains 2GSample memory 
 #define SEGMENT_SIZE (19*1024*10) //number of sample per segment

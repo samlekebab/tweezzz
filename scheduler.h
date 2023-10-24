@@ -20,7 +20,7 @@ struct AomHistoryPoint{
 
 	}
 	~AomHistoryPoint(){
-		printf("aom history point destructor\n");
+		//printf("aom history point destructor\n");
 	//	if (aom!=nullptr) delete aom;
 	}
 	/*
