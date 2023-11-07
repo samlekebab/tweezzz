@@ -22,8 +22,8 @@ class Card{//TODO make this class closer to the equivalent class from the python
 		double ajustementSlope = 0.003;
 		double ajustement = 0;
 		double securityThreshold = 1.8;
-		int controleRate = 1000;
-		int printRate = 1600;
+		int controleRate = 500;
+		int printRate = 4000;
 		long bufsizeInSamples = BUFFER_SIZE * (long)SEGMENT_SIZE * 4;
 		int16_t* buffer;//where we are putting the data to send to the card
 
@@ -86,7 +86,8 @@ class Card{//TODO make this class closer to the equivalent class from the python
 		//for 200MHz
 		float avg = 0.5;
 		float avgAvailBytes = bufsizeInSamples;
-		float P = 6e-9,I = 5e-8, D = 2e-5;
+		//float P = 6e-9,I = 5e-8, D = 2e-5;
+		float P = 19e-9,I = 5e-8, D = -25e-6;
  		float IError=0,pastError=0;
  		void syncClock2();
 

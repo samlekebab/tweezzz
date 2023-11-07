@@ -66,4 +66,20 @@ class Marker:public FormGenerator{
 	void setBeginningValue(float value){};
 
 };
+class Setter:public FormGenerator{
+public:
+	struct Setting{
+		float value;
+	}setting;
+	Setter(Setting setting):setting(setting){
+		setTag("setter");
+	}
+	float calc(long tick){
+		*target = setting.value;
+		return 0.0f;
+	}
+	long getDuration(){return 10;};
+	void setBeginningValue(float value){};
+
+};
 #endif

@@ -16,7 +16,7 @@ class Tweezer{
 
 		Tweezer(float* table,int tweezerCount):A(table[0]),N(table[1*tweezerCount]),w(table[2*tweezerCount]),p(table[3*tweezerCount]),pr(table[4*tweezerCount]){//super weird code :)
 
-			A=1.0f/tweezerCount;
+			A=0.0f/tweezerCount;
 			N=1;
 			w=70e6;
 			p=0.0;

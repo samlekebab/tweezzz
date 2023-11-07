@@ -76,7 +76,7 @@ int initAndStart(){
 	//initialisation
 	Aom1D aom1D; 
 	Aom2D aom2D;
-	Scheduler scheduler(aom1D,4);
+	Scheduler scheduler(aom1D,4);//4 means the log files will be res/sch_ch4.txt ("channel" number : 4 for realtime)
 
 	FormGenerator::scheduler = &scheduler;
 	//printf("tw0->A %f\n",*aom1D.table);

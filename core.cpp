@@ -61,7 +61,7 @@ void cardUpdater(Card& card){//, mutex& cardMutex){
 
 #endif
 
-void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1D, Aom2D& aom2D){
+void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1D, Aom2D& aom2D, MasterLock& masterLock){
 #ifndef no_card_connected
 	Card card;
 #else
@@ -94,10 +94,10 @@ void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1
 
 	//TODO do the calculation of recorded signal
 	//for the moment, no CPU calculation, TODO should it be maintained 
+	Aom* aomTable[3] = {&aom2D.V, &aom2D.H, &aom1D};
 #ifdef GPU_calculation
 	size_t maxLength = 0;
 	printf("record\n");
-	Aom* aomTable[3] = {&aom2D.V, &aom2D.H, &aom1D};
 	int16_t* recording;
 	FormGenerator::recordMode = true;
 
@@ -168,6 +168,9 @@ void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1
 
 	int debug=0;//DEBUG
 	while(1){
+		//step 0, check the master lock to make sur the sequence the sequence is writen
+		masterLock.testAndWaitUnlock();
+
 		//first, synchronize with card to know when we are, call time related events
 #ifdef no_card_connected
 		currentSegment = getCurrentCardSegment();
@@ -188,7 +191,7 @@ void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1
 		//in case we drop behind TODO code an "emergency" stop (or beter notification system ?) if the drop happen at critical time (when we manipulate atomes
 		tickToCompute = max(currentTick+(long)SAFE_TICK,tickToCompute);
 		if (tickToCompute == currentTick + SAFE_TICK){
-			printf("dropping at tick %ld\n",tickToCompute);
+			//printf("dropping at tick %ld\n",tickToCompute);
 			drop++;
 			//put at the begining of the next segment
 			tickToCompute = ((tickToCompute-1)/SEGMENT_SIZE + 1)*SEGMENT_SIZE;
@@ -215,7 +218,10 @@ void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1
 //TODO implement the selection of which channel compute at compile time (and then channel change during sequence -> create a phase adapter (or full adapter) to prevent phase (or signal ?) jump when returning to recorded signal)
 #ifdef RT_CALCULATION
 #ifdef GPU_calculation
-			int16_t* toCopy = calculateGPU(scheduler,aom1D,tickToCompute,gpu2,gpu2.outBuffer);
+			int RTChannel = 2;//TODO export channel out of this scope or in setting ? cf precedent TODO comment
+			int16_t* toCopy = calculateGPU(scheduler,*aomTable[RTChannel],tickToCompute,gpu2,gpu2.outBuffer);
+			copyTo4chBuff(&buff[RTChannel],gpu2.outBuffer,SEGMENT_SIZE,aomTable[RTChannel]->N*aomTable[RTChannel]->A);
+
 			//DEBUG
 			/*
 			for (int i=0;i<SEGMENT_SIZE*4;i++){
@@ -224,9 +230,9 @@ void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1
 				if (tickOfBuffer/SEGMENT_SIZE == 0){
 					buff[i] = 0;
 				}
-			}
+			}*/
 			debug++;
-			*/
+		
 
 #endif
 #ifdef CPU_calculation
@@ -239,6 +245,7 @@ void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1
 			//TODO add another rollback check -> print any negative result (and abbort ?)
 
 			//depending on wich setting we are, we save data, count MS/s, stop the loop etc..
+
 #ifdef 	file_output
 			for (int i{0};i<SEGMENT_SIZE;i++){
 				fprintf(f,"%d\n",buff[i]);
