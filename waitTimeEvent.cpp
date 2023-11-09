@@ -1,10 +1,10 @@
 #include "waitTimeEvent.h"
-
+#include <stdio.h>
 WaitTimeEvent::WaitTimeEvent(){
-		waitingMutex.lock();
 };
 float WaitTimeEvent::calc(long tick){
-	waitingMutex.unlock();
+	printf("\n\n\ncall end wait\n\n\n");
+	waitingLatch.count_down();//undefined behaviour ?
 	return 0;
 }
 void WaitTimeEvent::connectAndWait(long tick){
@@ -21,8 +21,8 @@ void WaitTimeEvent::connectRelativeAndWait(long tick){
 }
 void WaitTimeEvent::wait(){
 	//in record mode, timeEvents are not relevent, and waitTimeEvent needs not lock the sequence
+
 	if (!recordMode){
-		waitingMutex.lock();
-		waitingMutex.unlock();
+		waitingLatch.wait();
 	}
 }

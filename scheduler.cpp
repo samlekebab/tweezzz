@@ -9,8 +9,10 @@
 
 using namespace std;
 void Scheduler::addFormGenerator(FormGenerator* f){
-	lock_guard<mutex> scheduler_lock(this->usingScheduler_mutex);
-
+#ifdef sch_log
+	logFile<<"aquiring lock to add a generator"<<endl;
+#endif
+	//lock_guard<mutex> scheduler_lock(this->usingScheduler_mutex);
 #ifdef sch_log
 	logFile<<"adding a generator"<<endl;
 #endif

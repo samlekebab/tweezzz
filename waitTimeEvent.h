@@ -1,11 +1,11 @@
 #ifndef WAIT_TIME_EVENT
 #define WAIT_TIME_EVENT
-#include <mutex>
+#include <latch>
 #include "timeEvent.h"
 class WaitTimeEvent:public TimeEvent{
 	public:
 		float bidon;
-		std::mutex waitingMutex;
+		std::latch waitingLatch{1};
 
 		WaitTimeEvent();
 		float calc(long tick);

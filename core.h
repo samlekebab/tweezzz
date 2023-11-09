@@ -6,6 +6,7 @@
 #include <chrono>
 #include "coregpu.h"
 #include "setting.h"
+#include "MasterLock.h"
 
 #ifndef no_card_connected
 #include "card.h"
@@ -27,7 +28,8 @@ namespace coreCalc{
 void startTimer();
 long getTimer(std::chrono::time_point<std::chrono::system_clock> timer);
 
-void startCore(Scheduler& scheduler, void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1D, Aom2D& aom2D);
+void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&,MasterLock&), Aom1D& aom1D, Aom2D& aom2D, MasterLock& masterLock);
+
 
 void calculateCPU(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D, long currentTick, int16_t* buff);
 void calculateSegment(Scheduler& scheduler, Aom1D& aom1D, Aom2D& aom2D, long tick, int16_t* segment_buffer);

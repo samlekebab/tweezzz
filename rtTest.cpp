@@ -65,11 +65,13 @@ void sequence(Aom1D& aom1D, Aom2D& aom2D, MasterLock& masterLock){
 	
 	//we stop this code until it is time to do the detection
 	(new WaitTimeEvent())->connectRelativeAndWait(-detectionLatency);
+	masterLock.tryLock();
 	for (int i=0;i<nbPinces;i++){
 		//dummy detection, random draw
 		isAtom[i] = (int)frand(0.0,2.0);//50 percent
 	}
 
+	printf("\n\n\nend wait\n\n\n");
 	//then we move the tweezers or turn them off accordingly 
 	int counter = 0;
 	for (int i=0;i<nbPinces;i++){
@@ -84,7 +86,10 @@ void sequence(Aom1D& aom1D, Aom2D& aom2D, MasterLock& masterLock){
 
 		}
 
+
 	}
+	printf("\n\n\nregistered move end\n\n\n");
+	masterLock.unlock();
 	
 	//step3 rename the tweezers with the "switch" formGenerator TODO
 
@@ -120,6 +125,7 @@ int initAndStart(){
 	return 0;
 	
 }
+
 int main(){initAndStart();}
 
 

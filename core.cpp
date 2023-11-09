@@ -7,6 +7,7 @@
 #include <cstdio>
 #include "mmath.h"
 #include "coregpu.h"
+#include "MasterLock.h"
 
 #include "setting.h"
 #include "formGenerator.h"
@@ -61,7 +62,7 @@ void cardUpdater(Card& card){//, mutex& cardMutex){
 
 #endif
 
-void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1D, Aom2D& aom2D, MasterLock& masterLock){
+void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&,MasterLock&), Aom1D& aom1D, Aom2D& aom2D, MasterLock& masterLock){
 #ifndef no_card_connected
 	Card card;
 #else
@@ -100,6 +101,7 @@ void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1
 	printf("record\n");
 	int16_t* recording;
 	FormGenerator::recordMode = true;
+	MasterLock emptyLock;
 
 	//this is not greate because we are calling the sequence 3 times...
 	//TODO any idea to improve ?
@@ -111,7 +113,7 @@ void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1
 
 
 		//first we put the sequence in the scheduler
-		sequence(aom1D,aom2D);
+		sequence(aom1D,aom2D,emptyLock);
 
 		//allocation of memory
 		if (i==0){
@@ -185,7 +187,8 @@ void startCore(Scheduler& scheduler,void (*sequence)(Aom1D&,Aom2D&), Aom1D& aom1
 		//secondly, ask the scheduler what tick should be calculated next check with SAFE_SEGMENT to deduce the segment to calculate, convert it into a segment number
 		//lock the scheduler
 		//TODO release the scheduler lock before starting the calculation on the GPU(or CPU)
-		const lock_guard<mutex> scheduler_lock(scheduler.usingScheduler_mutex);
+		//DEBUG
+		lock_guard<mutex> scheduler_lock(scheduler.usingScheduler_mutex);
 		long tickToCompute = scheduler.nextTickToCompute;
 
 		//in case we drop behind TODO code an "emergency" stop (or beter notification system ?) if the drop happen at critical time (when we manipulate atomes
