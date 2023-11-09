@@ -3,8 +3,8 @@
 #include <mutex>
 class MasterLock{
 	int isLocked = 0;
-	std::Mutex lock;
-	std::Mutex atomiser;
+	std::mutex lock;
+	std::mutex atomiser;
 
 public :
 	int testAndWaitUnlock();
