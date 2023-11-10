@@ -285,7 +285,7 @@ void Card::recordDispenser(int16_t* record, size_t MaxLength){
 			for(;written4chSamples<min;written4chSamples+=4*SEGMENT_SIZE){
 				size_t placeInBuffer = (written4chSamples)%bufsizeInSamples;
 				
-				memcpy(&buffer[placeInBuffer],&record[written4chSamples],SEGMENT_SIZE* 4 * 2);
+				//memcpy(&buffer[placeInBuffer],&record[written4chSamples],SEGMENT_SIZE* 4 * 2);
 			}
 
 			//printf("record dispenser done, waiting\t writtenSamples : %ld\n",written4chSamples);

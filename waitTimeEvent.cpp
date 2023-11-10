@@ -3,7 +3,6 @@
 WaitTimeEvent::WaitTimeEvent(){
 };
 float WaitTimeEvent::calc(long tick){
-	printf("\n\n\ncall end wait\n\n\n");
 	waitingLatch.count_down();//undefined behaviour ?
 	return 0;
 }
