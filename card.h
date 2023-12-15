@@ -13,6 +13,8 @@
 #include <thread>
 #include <mutex>
 #include <barrier>
+#include "ClockCard.h"
+
 class Card{//TODO make this class closer to the equivalent class from the python code of pierre-Antoine Bourdel
 	public:
 		Card();
@@ -68,8 +70,8 @@ class Card{//TODO make this class closer to the equivalent class from the python
 		std::thread asyncInputThread;
 		void asyncReadInput();
 
-		long diffSum=0;//TODO unit all this counters (diff, diffSum, newEstimation, tick...)
-		unsigned long tick = 0;
+		ClockCard::ByteTimer diffSum;//TODO unit all this counters (diff, diffSum, newEstimation, tick...)
+		ClockCard::Tick tick;
 
 		std::mutex recordDispenserMutex;//to wait on the initialisation that the dispenser fill 1/2 of the buffer
 		

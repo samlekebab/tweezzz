@@ -11,3 +11,5 @@ withOptiInfo:
 
 test:
 	gcc -std=c++20 -O2 -ftree-vectorize -fopt-info-vec-all core.cpp
+rectest:
+	g++ -fext-numeric-literals -std=c++20 -O2 -ftree-vectorize recordTest.cpp core.cpp coregpu.cpp aom.cpp aom1D.cpp aom2D.cpp scheduler.cpp formGenerator.cpp tweezer.cpp tas.cpp mmath.cpp -o perftest.out -pg -lOpenCL 
