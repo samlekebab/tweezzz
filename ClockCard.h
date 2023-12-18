@@ -12,6 +12,7 @@ public:
 		ClockCard& ref;
 		virtual long get(){return ClockCard::bytesToTicks(ref-start);}
 		operator long() {return get();};
+		void reset(){start = (long)ref;}
 		Timer(ClockCard& ref):ref(ref),start((long)ref){};
 	};
 	struct ByteTimer:public Timer{
@@ -27,6 +28,9 @@ public:
 	long bytes=0;//bytes sended to the card since the beginning
 	void inc(long i){
 		bytes+=i;
+	}
+	void set(long i){
+		bytes = i;
 	}
 	operator long() {return bytes;};
 	operator Tick() {return tick;};

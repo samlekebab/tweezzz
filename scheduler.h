@@ -23,19 +23,6 @@ struct AomHistoryPoint{
 		//printf("aom history point destructor\n");
 	//	if (aom!=nullptr) delete aom;
 	}
-	/*
-	const bool operator<(const AomHistoryPoint other){
-		return tick < other.tick; 
-	}
-	const bool operator<(const int t){
-		return tick<t;
-	}
-	const bool operator<(const long int t){
-		return tick<t;
-	}
-	const bool operator>=(const long int t){
-		return tick>=t;
-	}*/
 	private : 
 		AomHistoryPoint();
 

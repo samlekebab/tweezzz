@@ -5,7 +5,7 @@
 Card* Card::card = nullptr;
 
 std::barrier recordDispenserBarrier(2,[]() noexcept {});//to resume the dispenser 
-Card::Card() {
+Card::Card():diffSum(absClock), pidTimer(absClock) {
 	Card::card = this;
 	initCard();
 	
@@ -125,6 +125,9 @@ void Card::initTransfert(){
 		spcm_dwSetParam_i64(hDrv, SPC_DATA_AVAIL_CARD_LEN, bufsizeInSamples);
 		spcm_dwSetParam_i32(hDrv, SPC_M2CMD, M2CMD_DATA_STARTDMA);
 		spcm_dwSetParam_i32(hDrv, SPC_M2CMD, M2CMD_DATA_WAITDMA);
+		
+		//debug
+		spcm_dwSetParam_i64(hDrv, SPC_DATA_AVAIL_CARD_LEN, 1*bufsizeInSamples/3);
 }
 void Card::start(){
 	//input async
@@ -175,62 +178,72 @@ void Card::syncClock(){
 
 void Card::syncClock2(){
  	spcm_dwGetParam_i64(hDrv, SPC_DATA_AVAIL_USER_LEN, &availBytes);//is this slow ?
+	//printf("syncClock2 1 %ld\n",(long)availBytes);
  
 	avgAvailBytes = avg * availBytes + (1.0-avg) * avgAvailBytes;//average mesurements
  	float error = availBytes - bufsizeInSamples;//TODO divid by time ?
  	float DError = (error - pastError)/newEstimator;
- 	IError += error * newEstimator * 1e-6;
+ 	IError += error * newEstimator * 1e-6 - 0.005*IError;
  	
- 	ajustement = 2.00 + P*error + I*IError + D*DError;
+ 	ajustement = ajustementInit + P*error + I*IError + D*DError;
+	ajustement = fmin(fmax(ajustement,ajustementInit-threshold),ajustementInit+threshold);
+ 	pastError = error;
+	pidLog << error << " " << DError << " " << IError << " " << ajustement <<"\n";
+	pidLog.flush();
+ 
  	timerEstimator = startTimer();
  	newEstimator = estimator = 0;
- 	pastError = error;
- 
+
+	k++;
  	float ratio = availBytes / (float)bufsizeInSamples;
- 	if (k % (controleRate * printRate) == 0) {
- 			printf("disponible : %lld (%f)->%f,\n",availBytes / 1000, ratio, ajustement);
- 			printf("errror %fM, IError %f, DError %f \n",error/1'000'000, IError, DError);
- 			printf("localMax %ld\n",  localMax);
- 		}
+	if (k > printRate) {
+		printf("disponible : %lld (%f)->%f,\n",availBytes / 1000, ratio, ajustement);
+		printf("errror %fM, IError %f, DError %f \n",error/1'000'000, IError, DError);
+		printf("localMax %ld\n",  localMax);
+		k=0;
+	}
 	localMax = 0;
 	
 }
 void Card::updateEstimation(){
 
-
 	newEstimator = getTimer(timerEstimator);
-	long diff = (newEstimator - estimator) *(SAMPLE_RATE/1'000'000) * ajustement;
+	long diff = (newEstimator - estimator) * (SAMPLE_RATE/1'000'000) * ajustement;
+	
+	//tick = oldTick + diff/2;
+	absClock.set((long)oldAbsClock);//more reliable counter
+	//printf("absClock 1 %ld\n",(long)absClock);
+	absClock.inc(diff);
+	//printf("absClock 2 %ld\n",(long)absClock);
 
-	tick = oldTick + diff/2;//TODO more reliable counter
-	k++;
+	//printf("diff %ld\n",diff);
 	if (diff > 8*1024) {
 		estimator = newEstimator;
 		localMax = localMax < diff ? diff : localMax;
 		spcm_dwSetParam_i64(hDrv, SPC_DATA_AVAIL_CARD_LEN, diff*4);//is this slow ? 
-		//printf("sended %d\n",diff);
 		c++;
-		oldTick = tick;
+		//oldTick = tick;
+		oldAbsClock.set((long)absClock);
+		//printf("oldAbsClock %ld\n",(long)oldAbsClock); 
 
-
-		diffSum +=diff;
-		if (diffSum>SEGMENT_SIZE*4*2){
+		//diffSum += diff;
+		if ( (long)diffSum > SEGMENT_SIZE*4*2 ){
 			//allow the record dispenser to resume writing in the buffer
 			//printf("unlocking record dispenser\n");
 			auto dump = recordDispenserBarrier.arrive();
-			diffSum = 0;
+			diffSum.reset();
 		}
-
 	}
 
 	
-	//syncronisation every few cycles, with a PID
-	if (k % controleRate == 0) {
+	//printf("absClock 3 %ld\n",(long)absClock);
+	//syncronisation with the card sometimes, with a PID
+	if ((long)pidTimer > controleRate ) {
+		pidTimer.reset();
 		syncClock2();
 	}
 	
-	
 
-	//spcm_dwSetParam_i32(hDrv, SPC_M2CMD, M2CMD_DATA_WAITDMA);
 	if (spcm_dwGetErrorInfo_i32(hDrv, NULL, NULL, szErrorText) != ERR_OK) // check for an error
 	{
 		printf("llAvailBytes %lld\n", availBytes); 
@@ -239,7 +252,8 @@ void Card::updateEstimation(){
 		printf("%s\n",szErrorText); // print the error text	
 
 		spcm_vClose(hDrv); // close the driver
-		exit(0); // and leave the program
+				   
+		exit(0); // and leave the program //TODO that might be one source of seg fault
 	}
 
 }
@@ -299,6 +313,9 @@ void Card::recordDispenser(int16_t* record, size_t MaxLength){
 		printf("end of recording\n");
 	}
 
+		//if we are in trigger mode, signal the end of the sequence to the card and wait for restart signal.
+		//the card will stop the time, and ask the core to reset the sequence.
+		//the card will wait for the trigger and signal the core when the sequence restart. the restart will engage the start sequence like it was the first time.
 
 
 }

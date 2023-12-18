@@ -15,6 +15,8 @@
 #include <barrier>
 #include "ClockCard.h"
 
+#include <fstream>
+
 class Card{//TODO make this class closer to the equivalent class from the python code of pierre-Antoine Bourdel
 	public:
 		Card();
@@ -22,37 +24,16 @@ class Card{//TODO make this class closer to the equivalent class from the python
 		//quite stable fifo one channel
 		double ajustementMax = 2.031; 
 		double ajustementSlope = 0.003;
-		double ajustement = 0;
+		double ajustement = 2.12;
+		double ajustementInit = ajustement;
+		double threshold = 1.5;
 		double securityThreshold = 1.8;
-		int controleRate = 1000;
-		int printRate = 1600;
+		int controleRate = 200'000;
+		int printRate = 10'000;
 		long bufsizeInSamples = BUFFER_SIZE * (long)SEGMENT_SIZE * 4;
 		int16_t* buffer;//where we are putting the data to send to the card
 
-		//quite stable fifo one channel
-//		double ajustementMax = 2.031; 
-//		double ajustementSlope = 0.003;
-//		double ajustement = 0;
-//		double securityThreshold = 1.8;
-//		int controleRate = 1000;
-//		int printRate = 1000;
-//		long bufsizeInSamples = BUFFER_SIZE * (long)SEGMENT_SIZE * 4;
-//		int16_t* buffer;//where we are putting the data to send to the card
-
-	//works only for a few second before loosing the signal
-		/*
-		double ajustementMax = 2.031; 
-		double ajustementSlope = 0.003;
-		double ajustement = 0;
-		double securityThreshold = 1.8;
-		int controleRate = 1000;
-		int printRate = 1000;
-		int llBufsizeInSamples = 50 * 262144;
-		*/
-
-
 		drv_handle hDrv; 
-
 
 		static timespec startTimer();
 		static long timespec_to_long(timespec time);
@@ -70,12 +51,16 @@ class Card{//TODO make this class closer to the equivalent class from the python
 		std::thread asyncInputThread;
 		void asyncReadInput();
 
-		ClockCard::ByteTimer diffSum;//TODO unit all this counters (diff, diffSum, newEstimation, tick...)
-		ClockCard::Tick tick;
+		ClockCard absClock;
+		ClockCard oldAbsClock;
+		ClockCard::ByteTimer diffSum;
+		ClockCard::Tick& tick = absClock.tick;
+		ClockCard::ByteTimer pidTimer;
 
 		std::mutex recordDispenserMutex;//to wait on the initialisation that the dispenser fill 1/2 of the buffer
 		
 		void recordDispenser(int16_t* record, size_t MaxLength);
+
 	private:
 
 		char szErrorText[ERRORTEXTLEN];
@@ -88,7 +73,8 @@ class Card{//TODO make this class closer to the equivalent class from the python
 		//for 200MHz
 		float avg = 0.5;
 		float avgAvailBytes = bufsizeInSamples;
-		float P = 6e-9,I = 5e-8, D = 2e-5;
+		//float P = 6e-9,I = 5e-8, D = 2e-5;
+		float P = 6e-8,I = 1e-6, D = 2e-14;
  		float IError=0,pastError=0;
  		void syncClock2();
 
@@ -99,6 +85,8 @@ class Card{//TODO make this class closer to the equivalent class from the python
 		int initCard();
 		void syncClockAsync();
 		void syncClock();
+
+		std::ofstream pidLog{"res/pidLog.txt"};
 
 
 };
