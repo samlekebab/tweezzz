@@ -74,11 +74,7 @@ class Card{//TODO make this class closer to the equivalent class from the python
 		float avg = 0.5;
 		float avgAvailBytes = bufsizeInSamples;
 		//float P = 6e-9,I = 5e-8, D = 2e-5;
-<<<<<<< HEAD
-		float P = 19e-9,I = 5e-8, D = -25e-6;
-=======
 		float P = 6e-8,I = 1e-6, D = 2e-14;
->>>>>>> clock_card
  		float IError=0,pastError=0;
  		void syncClock2();
 
