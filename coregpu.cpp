@@ -29,7 +29,7 @@ int CoreGPU::initCl(const char *programPath,const char *kernelName, cl_kernel& k
 	}
 	cl_device_id device_id[3];
 	cl_uint numDevices;
-	int plt = 1;
+	int plt = OCL_PLAT;
 	cl_err = clGetDeviceIDs(plt_id[plt],CL_DEVICE_TYPE_GPU,3,device_id,&numDevices);
 
 	if (cl_err == CL_SUCCESS)
@@ -104,7 +104,7 @@ int CoreGPU::initCl(const char *programPath,const char *kernelName, cl_kernel& k
 	buffer = clCreateBuffer(context,
 			CL_MEM_WRITE_ONLY
 			|CL_MEM_HOST_READ_ONLY
-			|CL_MEM_USE_HOST_PTR,
+			|CL_MEM_USE_HOST_PTR ,
 			buffSize,hostBuff,&cl_err);
 
 	if (cl_err == CL_SUCCESS)
@@ -166,8 +166,9 @@ int CoreGPU::loadCoreKernel(){
 	}
 	return 0;
 }
-int16_t* CoreGPU::calculate(long tick){
+int16_t* CoreGPU::calculate(long tick, int16_t* buffer){
 
+		//printf("YYYYYYYYYYYYYYYY\n");
 		size_t workOffset[]{0};
 
 		phase+=workSize*0.1f16;
@@ -176,6 +177,7 @@ int16_t* CoreGPU::calculate(long tick){
 		auto tmp = workSize;//because worksize is static const, no dereferencing possible.
 		clEnqueueNDRangeKernel(queue,kernel,1,workOffset,&tmp,NULL,0,NULL,NULL);
 		cl_int cl_err = clEnqueueReadBuffer(queue,cl_outBuffer,CL_TRUE,0,workSize*sizeof(int16_t),outBuffer,0,NULL,NULL);
+		//printf("XXXXXXXXXXXXXXXX\n");
 		//printf("read(%i)\n", cl_err);
 		//printf("a : gpu outbuffer 0 %d\n",outBuffer[938]);
 //			for (size_t i=0;i<960;i++){
@@ -183,21 +185,18 @@ int16_t* CoreGPU::calculate(long tick){
 //			}
 		return outBuffer;
 
-
-
 }
 
-int CoreGPU::setParams(Aom1D& aom1D,Aom2D& aom2D, int j){
-	//TODO this 4 is the number of params of a tweezer, not great to hard code it like that : 
+int CoreGPU::setParams(Aom& aom, int j){
+	//this 4 is the number of params of a tweezer, not great to hard code it like that : 
 	//if it changes some day we will probably forget to change this value... 
 	//hahaha it happened, now i correct it but i left this comment because it makes me laugh
-	int length = aom1D.tweezerCount*Tweezer::nbOfParam*sizeof(float);
+	int length = aom.tweezerCount*Tweezer::nbOfParam*sizeof(float);
 	clEnqueueWriteBuffer(queue,cl_aomBuffer,CL_TRUE,j*length,
 			length,
-			aom1D.table,
+			aom.table,
 		0,NULL,NULL);//wtf putting cl_false(asynchrone load) kills the performances !?
 	
-	//TODO the tables of aom2D
 
 	return 0;
 }

@@ -1,6 +1,7 @@
 #include "formGenerator.h"
 #include <stdexcept>
 #include <iostream>
+#include <cstring>
 using namespace std;
 Bounds FormGenerator::connect(long tick,float& target){
 	this->target = &target;
@@ -9,20 +10,40 @@ Bounds FormGenerator::connect(long tick,float& target){
 		//throw runtime_error("unregistered scheduler"); 
 	}
 	this->bounds.start = tick;
-	this->bounds.end = this->getDuration();
+	this->bounds.end = tick+this->getDuration();
 
-	scheduler->addFormGenerator(this);
+	//scheduler->addFormGenerator(this);
+	schedulerAdd();
 	return this->bounds;
 }
+
+void FormGenerator::schedulerAdd(){
+	scheduler->addFormGenerator(this);
+}
+
 Bounds FormGenerator::connect(float& target){
 	return this->connectRelative(0,target);
 }
 Bounds FormGenerator::connectRelative(long tick,float& target){
 	return connect(scheduler->EOFT+tick,target);
 }
-FormGenerator::~FormGenerator(){}
+void FormGenerator::findAndSetBeginningValue(){
+	_beginningValue = *target;
+	setBeginningValue(_beginningValue);
+}
+void FormGenerator::setTag(const char* tag){
+	int i{0};
+	while (tag[++i]!='\0');
+	this->tag = new char[i+1];
+	memcpy(this->tag,tag,i*sizeof(char));
+	this->tag[i]='\0';
+}
+FormGenerator::FormGenerator():id(idIt++) {}
+FormGenerator::~FormGenerator(){if(tag){delete[] tag;}}
 Scheduler* FormGenerator::scheduler=nullptr;
-
+int FormGenerator::idIt = 0;
+int FormGenerator::recordMode = false;
+float FormGenerator::fvoid = 0;
 //double FormGenerator::calc(long ticks){return 0;}
 //long FormGenerator::getDuration(){return 0;}	
 //void FormGenerator::setBeginningValue(double value){}
