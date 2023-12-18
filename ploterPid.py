@@ -15,5 +15,7 @@ for line in f:
 plt.plot(X,A)
 plt.xlabel("time u.a")
 plt.ylabel("error in ms")
-plt.ylabel
+plt.grid()
 plt.show()
+
+

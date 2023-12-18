@@ -26,7 +26,7 @@
 
 using namespace std;
 
-void sequence(Aom1D& aom1D, Aom2D& aom2D){
+void sequence(Aom1D& aom1D, Aom2D& aom2D, MasterLock& masterLock){
 	//float bidon;//replaced by 
 
 	/*
@@ -76,16 +76,19 @@ int initAndStart(){
 	//initialisation
 	Aom1D aom1D; 
 	Aom2D aom2D;
-	Scheduler scheduler(aom1D,4);//4 means the log files will be res/sch_ch4.txt ("channel" number : 4 for realtime)
+	Scheduler scheduler(aom1D,4);//4 means the log file will be res/sch_ch4.txt ("channel" number : 4 for realtime)
 
 	FormGenerator::scheduler = &scheduler;
 	//printf("tw0->A %f\n",*aom1D.table);
 
+	MasterLock masterLock;
+
+#define SEQUENCE sequence
 	//start the core
-	thread coreThread(coreCalc::startCore,ref(scheduler),sequence,ref(aom1D),ref(aom2D));
+	thread coreThread(coreCalc::startCore,ref(scheduler),SEQUENCE,ref(aom1D),ref(aom2D),ref(masterLock));
 	
 	//run the sequence
-	thread sequence_thread(sequence, std::ref(aom1D), std::ref(aom2D));
+	thread sequence_thread(SEQUENCE, std::ref(aom1D), std::ref(aom2D),ref(masterLock));
 	
 	//end
 	sequence_thread.join();

@@ -1,16 +1,12 @@
 //#ifndef MSETTINGS
 //#define MSETTINGS
 
-#define SAMPLE_RATE (330*1000000)
+#define SAMPLE_RATE (325*1000000)
 
 //card contains 2GSample memory 
 #define SEGMENT_SIZE (10*1024*10) //number of sample per segment
 #define BATCH_SIZE (1024*10)//too big? //number of sample where parameters stay constant
-<<<<<<< HEAD
-#define BUFFER_SIZE (800)  //number of segment in a cyclic buffer
-=======
 #define BUFFER_SIZE (400)  //number of segment in a cyclic buffer
->>>>>>> clock_card
 #define SAFE_TICK (10*SEGMENT_SIZE)//(3125*960)     //min delay (in ticks) between the start of the computation and the push to the card (directly related to the delay)
 #define MAX_TICK ((long)200*SEGMENT_SIZE) //how far we calculate in advance segments (should'nt influence the delay)
 #define MAX_VALUE 32767 //((15<<1) -1)	//max value of 16bit signed integer

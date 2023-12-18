@@ -183,7 +183,8 @@ void Card::syncClock2(){
 	avgAvailBytes = avg * availBytes + (1.0-avg) * avgAvailBytes;//average mesurements
  	float error = availBytes - bufsizeInSamples;//TODO divid by time ?
  	float DError = (error - pastError)/newEstimator;
- 	IError += error * newEstimator * 1e-6 - 0.005*IError;
+ 	IError += error * newEstimator * 1e-6 - 0.0005*IError;
+	IError = fmin(fmax(IError,-IMax),IMax);//prevent big integral oscillations
  	
  	ajustement = ajustementInit + P*error + I*IError + D*DError;
 	ajustement = fmin(fmax(ajustement,ajustementInit-threshold),ajustementInit+threshold);
@@ -253,7 +254,8 @@ void Card::updateEstimation(){
 
 		spcm_vClose(hDrv); // close the driver
 				   
-		exit(0); // and leave the program //TODO that might be one source of seg fault
+		printf("exiting\n");
+		throw std::exception();//TODO custom excetion
 	}
 
 }
@@ -299,7 +301,7 @@ void Card::recordDispenser(int16_t* record, size_t MaxLength){
 			for(;written4chSamples<min;written4chSamples+=4*SEGMENT_SIZE){
 				size_t placeInBuffer = (written4chSamples)%bufsizeInSamples;
 				
-				//memcpy(&buffer[placeInBuffer],&record[written4chSamples],SEGMENT_SIZE* 4 * 2);
+				memcpy(&buffer[placeInBuffer],&record[written4chSamples],SEGMENT_SIZE* 4 * 2);
 			}
 
 			//printf("record dispenser done, waiting\t writtenSamples : %ld\n",written4chSamples);

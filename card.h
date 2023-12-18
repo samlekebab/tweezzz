@@ -24,7 +24,7 @@ class Card{//TODO make this class closer to the equivalent class from the python
 		//quite stable fifo one channel
 		double ajustementMax = 2.031; 
 		double ajustementSlope = 0.003;
-		double ajustement = 2.12;
+		double ajustement = 2.15;
 		double ajustementInit = ajustement;
 		double threshold = 1.5;
 		double securityThreshold = 1.8;
@@ -51,10 +51,11 @@ class Card{//TODO make this class closer to the equivalent class from the python
 		std::thread asyncInputThread;
 		void asyncReadInput();
 
+		//counters based on absClock counter
 		ClockCard absClock;
 		ClockCard oldAbsClock;
 		ClockCard::ByteTimer diffSum;
-		ClockCard::Tick& tick = absClock.tick;
+		ClockCard::Tick& tick = absClock.tick;//for retrocompatibility
 		ClockCard::ByteTimer pidTimer;
 
 		std::mutex recordDispenserMutex;//to wait on the initialisation that the dispenser fill 1/2 of the buffer
@@ -74,7 +75,8 @@ class Card{//TODO make this class closer to the equivalent class from the python
 		float avg = 0.5;
 		float avgAvailBytes = bufsizeInSamples;
 		//float P = 6e-9,I = 5e-8, D = 2e-5;
-		float P = 6e-8,I = 1e-6, D = 2e-14;
+		float P = 6e-8,I = 1.6e-6, D = 3e-4;
+		float IMax = 60'000;//prevent big integral oscillations
  		float IError=0,pastError=0;
  		void syncClock2();
 

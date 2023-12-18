@@ -11,7 +11,7 @@ withOptiInfo:
 test:
 	gcc -std=c++20 -O2 -ftree-vectorize -fopt-info-vec-all core.cpp
 rectest:
-	g++ -fext-numeric-literals -std=c++20 -O2 -ftree-vectorize waitTimeEvent.cpp timeEvent.cpp recordTest.cpp core.cpp coregpu.cpp aom.cpp aom1D.cpp aom2D.cpp scheduler.cpp formGenerator.cpp tweezer.cpp tas.cpp mmath.cpp card.cpp -o rectest.out -pg -lOpenCL -lspcm64 -Wall 
+	g++ -fext-numeric-literals -std=c++20 -O2 -ftree-vectorize waitTimeEvent.cpp timeEvent.cpp recordTest.cpp core.cpp coregpu.cpp aom.cpp aom1D.cpp aom2D.cpp scheduler.cpp formGenerator.cpp tweezer.cpp tas.cpp mmath.cpp card.cpp MasterLock.cpp -o rectest.out -pg -lOpenCL -lspcm64 -Wall 
 analyse:
 	g++ -fext-numeric-literals -std=c++20 -O2 -ftree-vectorize analysis/fft_analysis.cpp -lfftw3 -lm -o analyse.out 
 rttest:
